@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0f172a" />
+<meta name="description" content="iPhone 釣魚紀錄 PWA：快速記錄魚種、數量、備註、GPS 位置與釣點分布。" />
+<meta name="application-name" content="釣魚紀錄" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="釣魚紀錄" />
+<meta name="format-detection" content="telephone=no" />
+<meta name="app-version" content="0.25.0" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/apple-touch-icon.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="./assets/icons/icon-512.png" />
+
+<title>釣魚紀錄</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--line:#334155;--text:#f8fafc;--muted:#94a3b8;--blue:#38bdf8;--green:#22c55e;--red:#ef4444;--purple:#c084fc;--soft:#172033}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);overscroll-behavior-y:contain;-webkit-tap-highlight-color:transparent;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans TC",sans-serif}button,input,select,textarea{font:inherit}.app{width:min(100%,760px);margin:auto;padding:calc(12px + env(safe-area-inset-top)) 12px calc(32px + env(safe-area-inset-bottom))}.header{text-align:center;padding:6px 0 4px}.header h1{margin:0;font-size:1.35rem;color:var(--blue)}.header p{margin:5px 0 0;color:var(--muted);font-size:.8rem}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:12px;box-shadow:0 4px 18px rgba(0,0,0,.14)}.title{font-weight:800;color:var(--blue);font-size:1rem;margin-bottom:10px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.grid2{display:grid;grid-template-columns:1fr 110px;gap:10px}.field label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:5px}.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);background:#0f172a;color:var(--text);border-radius:8px;padding:10px}.field textarea{min-height:74px;resize:vertical}.btn{border:0;border-radius:8px;padding:9px 12px;font-weight:700;cursor:pointer}.btn-primary{background:var(--blue);color:#082f49}.btn-green{background:var(--green);color:#052e16}.btn-dark{background:#0f172a;color:var(--text);border:1px solid var(--line)}.btn-danger{background:transparent;color:#fca5a5;border:1px solid #7f1d1d}.btn-small{padding:6px 9px;font-size:.78rem}.btn:disabled{opacity:.45;cursor:not-allowed}.grow{flex:1}.status{background:#0f172a;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:.82rem;line-height:1.55}.status strong{color:var(--blue)}#map,#distributionMap{height:280px;border-radius:9px;overflow:hidden;margin-top:10px;border:1px solid var(--line)}.hint{color:var(--muted);font-size:.75rem;line-height:1.5;margin-top:7px}.fish-manager{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}.fish-add{display:flex;gap:8px}.fish-add input{flex:1}.fish-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}.fish-item{display:flex;align-items:center;gap:8px;background:#0f172a;border:1px solid var(--line);border-radius:8px;padding:8px 9px}.fish-name{flex:1;font-size:.86rem}.record-list{display:flex;flex-direction:column;gap:8px}.record{display:flex;gap:10px;align-items:flex-start;background:#0f172a;border:1px solid var(--line);border-radius:9px;padding:10px}.record-main{flex:1;min-width:0}.record-title{font-weight:800}.record-meta,.record-note{font-size:.76rem;color:var(--muted);margin-top:4px;line-height:1.45}.record-note{color:#cbd5e1}.record-note-edit,.record-spot-edit{margin-top:7px}.record-note-edit textarea{width:100%;min-height:68px;border:1px solid var(--line);background:#111827;color:var(--text);border-radius:8px;padding:8px;resize:vertical}.record-spot-edit input{width:100%;border:1px solid var(--line);background:#111827;color:var(--text);border-radius:8px;padding:8px}.record-spot-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.map-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:7px;color:var(--muted);font-size:.75rem}.legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}.legend-now{background:#38bdf8}.legend-spot{background:#ef4444}.legend-virtual{background:#c084fc}.record-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.empty{color:var(--muted);font-size:.82rem;padding:8px 0}.coords{word-break:break-all}.divider{height:1px;background:var(--line);margin:12px 0}.spot-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}.map-filter-box{margin-top:10px;background:#0f172a;border:1px solid var(--line);border-radius:9px;padding:10px}.map-filter-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.map-filter-title{font-size:.84rem;font-weight:800;color:#e2e8f0;flex:1}.map-filter-actions{display:flex;gap:6px;flex-wrap:wrap}.fish-filter-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.fish-filter-chip{display:inline-flex;align-items:center;gap:6px;background:#172033;border:1px solid var(--line);border-radius:999px;padding:6px 9px;font-size:.78rem;color:#e2e8f0;cursor:pointer;user-select:none}.fish-filter-chip input{accent-color:var(--blue);width:16px;height:16px;margin:0}.fish-filter-chip .count{color:var(--muted);font-size:.7rem}.map-filter-summary{margin-top:8px;color:var(--muted);font-size:.74rem}.catch-map-icon{background:transparent;border:none}.catch-map-pin{display:flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 7px;border-radius:15px;background:#f8fafc;color:#0f172a;border:2px solid #0284c7;box-shadow:0 2px 7px rgba(0,0,0,.32);font-size:11px;font-weight:800;white-space:nowrap}.leaflet-control-attribution{font-size:8px!important}
+.spot-share-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.saved-spot-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}.saved-spot-item{display:flex;gap:8px;align-items:flex-start;background:#0f172a;border:1px solid var(--line);border-radius:9px;padding:9px}.saved-spot-main{flex:1;min-width:0}.saved-spot-name{font-weight:800;font-size:.88rem}.saved-spot-coords{color:var(--muted);font-size:.73rem;margin-top:3px;word-break:break-all}.saved-spot-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.share-status{margin-top:8px;color:var(--muted);font-size:.75rem;line-height:1.5}.share-text-box{margin-top:10px}.share-text-box label{display:block;font-size:.78rem;color:#cbd5e1;font-weight:700;margin-bottom:5px}.share-textarea{width:100%;min-height:150px;border:1px solid var(--line);background:#0f172a;color:var(--text);border-radius:8px;padding:10px;resize:vertical;line-height:1.5;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem}.share-textarea.import{min-height:120px}.share-subtitle{font-size:.83rem;font-weight:800;color:#e2e8f0;margin-top:13px}.share-divider{height:1px;background:var(--line);margin:14px 0}
+.share-collapse{padding:0;overflow:hidden}.share-summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;color:var(--blue);font-weight:800;font-size:1rem}.share-summary::-webkit-details-marker{display:none}.share-summary::after{content:"＋";color:var(--muted);font-size:1.15rem;font-weight:900}.share-collapse[open] .share-summary::after{content:"－"}.share-summary-hint{margin-left:auto;color:var(--muted);font-size:.72rem;font-weight:600}.share-collapse-body{border-top:1px solid var(--line);padding:14px}.share-collapse:not([open]) .share-summary{margin:0}.quick-location-status{margin-top:10px;background:#0f172a;border:1px solid #0ea5e9;border-radius:9px;padding:10px;font-size:.8rem;line-height:1.5;color:#dbeafe}.quick-location-status strong{color:#38bdf8}.quick-save-status{display:none;margin-top:9px;background:#052e16;border:1px solid #16a34a;border-radius:9px;padding:10px;font-size:.8rem;line-height:1.5;color:#dcfce7}.quick-save-status .btn{margin-top:7px}.mode-note{margin-top:7px;color:#94a3b8;font-size:.73rem;line-height:1.5}.virtual-location-box{margin-top:10px;background:#171126;border:1px solid #7e22ce;border-radius:9px;padding:10px}.virtual-location-box strong{color:#c084fc}.virtual-location-status{margin-top:4px;color:#e9d5ff;font-size:.78rem;line-height:1.45;word-break:break-all}.virtual-note-field{display:none;margin-top:10px;padding:10px;border:1px dashed #9333ea;border-radius:9px;background:#171126}.virtual-note-field label{color:#d8b4fe}.virtual-badge{display:inline-block;margin-right:5px;padding:2px 6px;border-radius:999px;background:#581c87;color:#f3e8ff;font-size:.68rem;font-weight:800;vertical-align:1px}.record-virtual-note{font-size:.76rem;color:#d8b4fe;margin-top:4px;line-height:1.45}
+@media(max-width:520px){.app{padding:10px 10px 28px}.grid2{grid-template-columns:1fr 92px}.row.mobile-stack{display:grid;grid-template-columns:1fr 1fr}.row.mobile-stack .btn{width:100%}#map,#distributionMap{height:250px}.record{padding:9px}.header h1{font-size:1.2rem}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>🎣 釣魚紀錄</h1>
+    <p>快速記魚・藍點即時定位・紫點虛擬測試・紅點歷史釣點<br><span style="opacity:.7">iPhone PWA 測試版 v0.25.0</span></p>
+  </div>
+
+  <section class="card">
+    <div class="title">📍 現在位置／釣點地圖</div>
+    <div class="status">
+      <div><strong style="color:#38bdf8">🔵 手機目前位置（持續定位）</strong></div>
+      <div id="currentLocationText" class="coords">正在等待手機定位權限…</div>
+      <div style="margin-top:9px"><strong id="spotLabel" style="color:#ef4444">🔴 歷史釣點</strong></div>
+      <div id="gpsText" class="coords">尚無已記錄的釣點座標；有定位的釣獲會自動成為紅色釣點。</div>
+    </div>
+    <div class="virtual-location-box">
+      <div><strong>🟣 虛擬現在位置（測試用）</strong></div>
+      <div id="virtualLocationText" class="virtual-location-status">未啟用。啟用後可點地圖或拖曳紫點指定測試位置。</div>
+      <div class="row" style="margin-top:8px">
+        <button id="virtualLocationToggleBtn" class="btn btn-dark grow" onclick="toggleVirtualLocation()">🟣 啟用虛擬位置</button>
+        <button id="virtualCenterBtn" class="btn btn-dark btn-small" onclick="centerOnVirtualLocation()" disabled>回到紫點</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn btn-primary grow" onclick="centerOnCurrentLocation()">🔵 回到目前位置</button>
+      <button id="spotCycleBtn" class="btn btn-dark" onclick="cycleFishingSpots()">🔴 下一個釣點</button>
+      <button class="btn btn-dark btn-small" onclick="locateMe()">📡 更新定位</button>
+    </div>
+    <div id="map"></div>
+    <div class="map-legend"><span><span class="legend-dot legend-now"></span>手機目前位置</span><span><span class="legend-dot legend-virtual"></span>虛擬現在位置（測試）</span><span><span class="legend-dot legend-spot"></span>歷史釣點（可拖曳整理）</span></div>
+    <div class="row" style="margin-top:8px">
+      <button id="savePointBtn" class="btn btn-green grow" onclick="saveMovedFishingSpot()" disabled>💾 儲存拖曳後的釣點位置</button>
+    </div>
+    <div id="spotCycleStatus" class="hint">紅色釣點依最近釣獲時間優先排列；按「下一個釣點」可循環查看。</div>
+    <div class="hint">平常記錄使用藍色手機位置。啟用紫色「虛擬現在位置」後，記錄釣獲會暫時改用紫點座標；紫點只在本次開啟網頁期間有效，重新整理會自動關閉。紅色釣點是已記錄的歷史位置。</div>
+    <input id="spotName" type="hidden" value="未命名釣點" />
+  </section>
+
+
+  <section class="card">
+    <div class="title">🐟 快速記錄釣獲</div>
+    <div class="grid2">
+      <div class="field">
+        <label for="fishSpeciesSelect">釣獲魚種</label>
+        <select id="fishSpeciesSelect"></select>
+      </div>
+      <div class="field">
+        <label for="catchQuantity">數量</label>
+        <input id="catchQuantity" type="number" min="1" step="1" value="1" inputmode="numeric" />
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn btn-dark btn-small" onclick="toggleFishManager()">⚙️ 管理魚種</button>
+    </div>
+
+    <div id="fishManager" class="fish-manager">
+      <div class="fish-add">
+        <input id="newFishSpeciesInput" placeholder="輸入新魚種" />
+        <button class="btn btn-primary btn-small" onclick="addFishSpecies()">新增</button>
+      </div>
+      <div class="hint">下面每個魚種都可以單獨刪除；刪除魚種不會刪掉過去已儲存的釣獲紀錄。</div>
+      <div id="fishSpeciesList" class="fish-list"></div>
+    </div>
+
+    <div class="field" style="margin-top:10px">
+      <label for="catchNote">備註（選填）</label>
+      <textarea id="catchNote" placeholder="例如：餌別、尺寸、咬況、放流等"></textarea>
+    </div>
+    <div id="virtualNoteField" class="virtual-note-field">
+      <div class="field">
+        <label for="virtualCatchNote">🟣 虛擬備註（只在虛擬位置紀錄時儲存）</label>
+        <textarea id="virtualCatchNote" placeholder="例如：測試竹圍北堤、模擬朋友分享點、測試分布功能"></textarea>
+      </div>
+    </div>
+    <div id="quickLocationStatus" class="quick-location-status">📍 本筆位置：等待手機定位…</div>
+    <div class="mode-note">真實釣魚時維持藍點即可；測試時才啟用紫點。使用紫點記錄的資料會標示「虛擬測試」，並額外保存虛擬備註。</div>
+    <button class="btn btn-green" style="width:100%;margin-top:10px" onclick="saveCatchRecord()">💾 記錄釣獲</button>
+    <div id="quickSaveStatus" class="quick-save-status"></div>
+  </section>
+
+
+  <section class="card">
+    <div class="title">🐟 釣獲魚種分布地圖</div>
+    <div class="map-filter-box" style="margin-top:0">
+      <div class="map-filter-head">
+        <div class="map-filter-title">選擇要看的魚種</div>
+        <div class="map-filter-actions">
+          <button class="btn btn-dark btn-small" onclick="selectAllMapFish()">全選</button>
+          <button class="btn btn-dark btn-small" onclick="clearAllMapFish()">清除</button>
+          <button class="btn btn-primary btn-small" onclick="fitCatchDistribution()">查看分布</button>
+        </div>
+      </div>
+      <div id="mapFishFilters" class="fish-filter-list"></div>
+      <div id="mapFilterSummary" class="map-filter-summary">尚無可顯示的釣獲位置。</div>
+    </div>
+    <div id="distributionMap"></div>
+    <div class="hint">預設會顯示所有「有座標」的釣獲紀錄。勾選 1 種或多種魚後，分布地圖會立即更新並自動縮放到該魚種的釣獲位置。</div>
+  </section>
+
+  <section class="card">
+    <div class="title">📒 釣獲紀錄</div>
+    <div id="catchLogList" class="record-list"></div>
+  </section>
+
+  <details class="card share-collapse">
+    <summary class="share-summary">
+      <span>📤 分享／接收釣點</span>
+      <span class="share-summary-hint">點此展開／收合</span>
+    </summary>
+    <div class="share-collapse-body">
+      <div class="hint" style="margin-top:0">只分享釣點名稱與座標，不含魚種、數量或備註。按「複製」後可直接貼到 LINE；收到朋友的文字後貼到下方即可加入。</div>
+
+      <div class="share-subtitle" style="margin-top:10px">📤 分享給朋友</div>
+      <div class="spot-share-actions">
+        <button class="btn btn-primary" onclick="copyAllShareableSpots()">📋 複製全部釣點</button>
+      </div>
+      <div id="savedSpotList" class="saved-spot-list"></div>
+
+      <div class="share-divider"></div>
+      <div class="share-subtitle" style="margin-top:0">📥 收到朋友釣點</div>
+      <div class="share-text-box" style="margin-top:8px">
+        <label for="spotImportText">把朋友傳來的完整文字貼在這裡</label>
+        <textarea id="spotImportText" class="share-textarea import" placeholder="長按貼上／Ctrl+V，貼上完整的釣點分享文字"></textarea>
+      </div>
+      <div class="spot-share-actions">
+        <button class="btn btn-primary" onclick="importSpotsFromText()">＋ 加入我的釣點</button>
+        <button class="btn btn-dark" onclick="document.getElementById('spotImportText').value=''">清除</button>
+      </div>
+      <div id="spotShareStatus" class="share-status">有座標的釣獲會自動列入可分享釣點。</div>
+    </div>
+  </details>
+</div>
+
+<script>
+const DEFAULT_FISH_SPECIES=['黑鯛','白帶魚','鱸魚','石斑','紅甘','竹筴魚','虱目魚','午仔魚','臭肚','花枝','透抽'];
+let fishSpeciesList=[];
+let catchRecords=[];
+let savedSpots=[];
+let map, distributionMap, pointMarker, accuracyCircle, currentLocationMarker, currentLocationAccuracyCircle, virtualLocationMarker, catchMarkerLayer, spotHistoryLayer;
+let selectedMapFish=new Set();
+let currentPoint=null;
+let currentDevicePoint=null;
+let virtualLocationPoint=null;
+let virtualLocationEnabled=false;
+let currentWatchId=null;
+let currentSpotName='未命名釣點';
+let activeSpotContext=null;
+let spotCycleIndex=-1;
+let spotPositionDirty=false;
+
+function esc(v){return String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[s]));}
+function formatTime(iso){const d=new Date(iso);return Number.isNaN(d.getTime())?String(iso||''):d.toLocaleString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});}
+function hasPosition(r){return r&&r.lat!==null&&r.lat!==undefined&&r.lat!==''&&r.lon!==null&&r.lon!==undefined&&r.lon!==''&&Number.isFinite(Number(r.lat))&&Number.isFinite(Number(r.lon));}
+
+function initMap(){
+  map=L.map('map',{zoomControl:true}).setView([25.033,121.5654],9);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+  distributionMap=L.map('distributionMap',{zoomControl:true}).setView([23.7,121.0],7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(distributionMap);
+  catchMarkerLayer=L.layerGroup().addTo(distributionMap);
+  spotHistoryLayer=L.layerGroup().addTo(map);
+  setTimeout(()=>{map.invalidateSize();distributionMap.invalidateSize();},80);
+  // V24：紅色只顯示真正的歷史釣獲／匯入釣點，不沿用舊版暫存的「目前釣點」。
+  document.getElementById('spotName').value='未命名釣點';
+  map.on('click',e=>{
+    if(!virtualLocationEnabled)return;
+    setVirtualLocation(e.latlng.lat,e.latlng.lng,false);
+  });
+  updatePointText();
+  updateVirtualLocationUi();
+}
+
+function updateVirtualLocationUi(){
+  const txt=document.getElementById('virtualLocationText');
+  const btn=document.getElementById('virtualLocationToggleBtn');
+  const centerBtn=document.getElementById('virtualCenterBtn');
+  const noteField=document.getElementById('virtualNoteField');
+  if(btn)btn.textContent=virtualLocationEnabled?'🟣 關閉虛擬位置':'🟣 啟用虛擬位置';
+  if(centerBtn)centerBtn.disabled=!virtualLocationEnabled||!virtualLocationPoint;
+  if(noteField)noteField.style.display=virtualLocationEnabled?'block':'none';
+  if(txt){
+    txt.textContent=virtualLocationEnabled&&virtualLocationPoint
+      ?`${virtualLocationPoint.lat.toFixed(6)}, ${virtualLocationPoint.lon.toFixed(6)}｜測試模式：點地圖或拖曳紫點可移動`
+      :'未啟用。啟用後可點地圖或拖曳紫點指定測試位置。';
+  }
+  updateQuickLocationStatus();
+}
+function setVirtualLocation(lat,lon,center=false){
+  lat=Number(lat);lon=Number(lon);
+  if(!Number.isFinite(lat)||!Number.isFinite(lon))return;
+  virtualLocationPoint={lat,lon,savedAt:new Date().toISOString()};
+  const icon=L.divIcon({className:'catch-map-icon',html:'<div class="catch-map-pin" style="border-color:#9333ea;color:#6b21a8;background:#faf5ff">虛擬</div>',iconSize:[46,30],iconAnchor:[23,15],popupAnchor:[0,-15]});
+  if(virtualLocationMarker){
+    virtualLocationMarker.setLatLng([lat,lon]);
+    virtualLocationMarker.setIcon(icon);
+  }else{
+    virtualLocationMarker=L.marker([lat,lon],{icon,draggable:true,zIndexOffset:900}).addTo(map).bindPopup('🟣 虛擬現在位置（測試）');
+    virtualLocationMarker.on('dragend',e=>{
+      const p=e.target.getLatLng();
+      virtualLocationPoint={lat:Number(p.lat),lon:Number(p.lng),savedAt:new Date().toISOString()};
+      updateVirtualLocationUi();
+    });
+  }
+  if(center)map.setView([lat,lon],Math.max(map.getZoom(),16));
+  updateVirtualLocationUi();
+}
+function toggleVirtualLocation(){
+  if(virtualLocationEnabled){
+    virtualLocationEnabled=false;
+    virtualLocationPoint=null;
+    if(virtualLocationMarker){map.removeLayer(virtualLocationMarker);virtualLocationMarker=null;}
+    const v=document.getElementById('virtualCatchNote');if(v)v.value='';
+    updateVirtualLocationUi();
+    return;
+  }
+  virtualLocationEnabled=true;
+  const base=currentDevicePoint||map.getCenter();
+  setVirtualLocation(Number(base.lat),Number(base.lon??base.lng),true);
+}
+function centerOnVirtualLocation(){
+  if(!virtualLocationEnabled||!virtualLocationPoint){alert('請先啟用虛擬位置。');return;}
+  map.setView([virtualLocationPoint.lat,virtualLocationPoint.lon],Math.max(map.getZoom(),16));
+  if(virtualLocationMarker)virtualLocationMarker.openPopup();
+}
+function updateQuickLocationStatus(){
+  const q=document.getElementById('quickLocationStatus');if(!q)return;
+  if(virtualLocationEnabled&&virtualLocationPoint){
+    q.innerHTML=`<strong style="color:#c084fc">🟣 本筆位置：虛擬現在位置（測試）</strong><br>${virtualLocationPoint.lat.toFixed(6)}, ${virtualLocationPoint.lon.toFixed(6)}`;
+    return;
+  }
+  if(currentDevicePoint){
+    const acc=Number.isFinite(Number(currentDevicePoint.accuracy))?`｜精度約 ±${Math.round(Number(currentDevicePoint.accuracy))} m`:'';
+    q.innerHTML=`<strong>📍 本筆位置：手機目前位置</strong><br>${Number(currentDevicePoint.lat).toFixed(6)}, ${Number(currentDevicePoint.lon).toFixed(6)}${acc}`;
+  }else q.textContent='📍 本筆位置：等待手機定位…';
+}
+
+function updateSavePointButton(){
+  const btn=document.getElementById('savePointBtn');if(!btn)return;
+  btn.disabled=!spotPositionDirty;
+  btn.textContent=spotPositionDirty?'💾 儲存釣點位置（已移動）':'💾 儲存釣點位置';
+}
+function currentSpotPopupHtml(){
+  const name=esc(currentSpotName||'目前釣點');
+  const latest=activeSpotContext?.latestSavedAt?`<br><span style="font-size:11px;color:#64748b">最近釣獲：${esc(formatTime(activeSpotContext.latestSavedAt))}</span>`:'';
+  return `<strong>${name}</strong>${latest}`;
+}
+function setPoint(lat,lon,accuracy=null,source='定位',center=true){
+  currentPoint={lat:Number(lat),lon:Number(lon),accuracy:accuracy==null?null:Number(accuracy),source};
+  const spotIcon=L.divIcon({className:'catch-map-icon',html:'<div class="catch-map-pin" style="border-color:#ef4444;color:#991b1b">釣點</div>',iconSize:[42,30],iconAnchor:[21,15],popupAnchor:[0,-15]});
+  if(pointMarker){
+    pointMarker.setLatLng([lat,lon]);
+    pointMarker.setIcon(spotIcon);
+    pointMarker.setPopupContent(currentSpotPopupHtml());
+    if(pointMarker.dragging&&!pointMarker.dragging.enabled())pointMarker.dragging.enable();
+  }else{
+    pointMarker=L.marker([lat,lon],{icon:spotIcon,draggable:true}).addTo(map).bindPopup(currentSpotPopupHtml());
+    pointMarker.on('dragstart',()=>{
+      if(accuracyCircle){map.removeLayer(accuracyCircle);accuracyCircle=null;}
+    });
+    pointMarker.on('dragend',e=>{
+      const p=e.target.getLatLng();
+      currentPoint={lat:Number(p.lat),lon:Number(p.lng),accuracy:null,source:'地圖拖曳（尚未儲存）'};
+      spotPositionDirty=true;
+      updateSavePointButton();
+      updatePointText();
+    });
+  }
+  if(accuracyCircle){map.removeLayer(accuracyCircle);accuracyCircle=null;}
+  if(Number.isFinite(+accuracy)&&accuracy>0) accuracyCircle=L.circle([lat,lon],{radius:+accuracy,weight:1,color:'#ef4444',fillColor:'#ef4444',fillOpacity:.06}).addTo(map);
+  if(center) map.setView([lat,lon],Math.max(map.getZoom(),16));
+  spotPositionDirty=false;
+  updateSavePointButton();
+  updatePointText();
+  persistPoint();
+}
+
+function persistPoint(){if(!currentPoint)return;localStorage.setItem('sunnyfish_current_point_v1',JSON.stringify({...currentPoint,name:currentSpotName}));}
+function updatePointText(){
+  const label=document.getElementById('spotLabel');
+  label.style.color='#ef4444';
+  if(!currentPoint){label.textContent='釣點（紅色）';document.getElementById('gpsText').textContent='尚無已記錄的釣點座標；儲存有定位的釣獲後會顯示在這裡。';return;}
+  label.textContent=`🔴 ${currentSpotName||'目前釣點'}`;
+  const acc=currentPoint.accuracy?`｜精度約 ±${Math.round(currentPoint.accuracy)} m`:'';
+  const dirty=spotPositionDirty?'｜已移動，尚未儲存':'';
+  document.getElementById('gpsText').textContent=`${currentPoint.lat.toFixed(6)}, ${currentPoint.lon.toFixed(6)}｜${currentPoint.source}${acc}${dirty}`;
+}
+function spotKey(lat,lon,precision=5){return `${Number(lat).toFixed(precision)},${Number(lon).toFixed(precision)}`;}
+function getCyclableFishingSpots(){
+  const groups=new Map();
+  catchRecords.forEach(r=>{
+    if(!hasPosition(r))return;
+    const lat=Number(r.lat),lon=Number(r.lon),key=spotKey(lat,lon,5);
+    const ts=Number.isFinite(Date.parse(r.savedAt))?Date.parse(r.savedAt):0;
+    if(!groups.has(key))groups.set(key,{key,lat,lon,name:String(r.spotName||'目前釣點').trim()||'目前釣點',recordIds:[],catchCount:0,totalQty:0,latestTime:-1,latestSavedAt:r.savedAt||'',latestSpecies:r.species||'',latestQty:r.quantity||1});
+    const g=groups.get(key);
+    g.recordIds.push(r.id);g.catchCount+=1;g.totalQty+=Math.max(1,parseInt(r.quantity,10)||1);
+    if(ts>=g.latestTime){g.latestTime=ts;g.latestSavedAt=r.savedAt||'';g.name=String(r.spotName||g.name||'目前釣點').trim()||'目前釣點';g.lat=lat;g.lon=lon;g.latestSpecies=r.species||'';g.latestQty=r.quantity||1;}
+  });
+  return [...groups.values()].sort((a,b)=>b.latestTime-a.latestTime||String(a.name).localeCompare(String(b.name),'zh-TW'));
+}
+function findFishingSpotByRecordId(id){return getCyclableFishingSpots().find(s=>s.recordIds.includes(id))||null;}
+function isSameActiveCatchSpot(s){
+  if(!s||activeSpotContext?.kind!=='catch')return false;
+  return s.recordIds.some(id=>activeSpotContext.recordIds?.includes(id));
+}
+function renderFishingSpotMarkers(){
+  if(!spotHistoryLayer)return;
+  spotHistoryLayer.clearLayers();
+  const spots=getCyclableFishingSpots();
+  spots.forEach((s,i)=>{
+    if(isSameActiveCatchSpot(s))return;
+    const marker=L.circleMarker([s.lat,s.lon],{radius:7,weight:2,color:'#ffffff',fillColor:'#ef4444',fillOpacity:.95});
+    marker.bindPopup(`<strong>${esc(s.name)}</strong><br>${esc(s.latestSpecies)} × ${esc(s.latestQty)}<br><span style="font-size:11px;color:#64748b">${esc(formatTime(s.latestSavedAt))}</span>`);
+    marker.on('click',()=>{
+      if(spotPositionDirty&&!confirm('目前釣點已移動但尚未儲存。要放棄這次移動並切換到其他釣點嗎？'))return;
+      activateFishingSpot(s,true,i,true);
+    });
+    marker.addTo(spotHistoryLayer);
+  });
+  const status=document.getElementById('spotCycleStatus');
+  if(status){
+    if(!spots.length)status.textContent='目前沒有可切換的有座標釣點。';
+    else status.textContent=`共有 ${spots.length} 個歷史釣點；按「下一個釣點」會依最近釣獲時間優先循環切換。`;
+  }
+}
+function activateFishingSpot(s,center=true,index=null,openPopup=false){
+  if(!s)return;
+  activeSpotContext={kind:'catch',recordIds:[...(s.recordIds||[])],originalLat:Number(s.lat),originalLon:Number(s.lon),latestSavedAt:s.latestSavedAt||'',name:s.name||'目前釣點'};
+  currentSpotName=s.name||'目前釣點';
+  document.getElementById('spotName').value=currentSpotName;
+  const spots=getCyclableFishingSpots();
+  spotCycleIndex=index==null?spots.findIndex(x=>x.recordIds.some(id=>activeSpotContext.recordIds.includes(id))):index;
+  setPoint(Number(s.lat),Number(s.lon),null,'已儲存釣點',center);
+  if(pointMarker)pointMarker.setPopupContent(currentSpotPopupHtml());
+  renderFishingSpotMarkers();
+  const btn=document.getElementById('spotCycleBtn');
+  if(btn&&spots.length&&spotCycleIndex>=0)btn.textContent=`🔴 下一個釣點 ${spotCycleIndex+1}/${spots.length}`;
+  if(openPopup&&pointMarker)pointMarker.openPopup();
+}
+function activateImportedSpot(s,center=true){
+  if(!s)return;
+  activeSpotContext={kind:'imported',savedSpotId:s.id||null,originalLat:Number(s.lat),originalLon:Number(s.lon),latestSavedAt:'',name:s.name||'未命名釣點'};
+  spotCycleIndex=-1;currentSpotName=s.name||'未命名釣點';document.getElementById('spotName').value=currentSpotName;
+  setPoint(Number(s.lat),Number(s.lon),null,'匯入釣點',center);renderFishingSpotMarkers();
+}
+function cycleFishingSpots(){
+  if(spotPositionDirty&&!confirm('目前釣點已移動但尚未儲存。要放棄這次移動並切換到其他釣點嗎？'))return;
+  const spots=getCyclableFishingSpots();
+  if(!spots.length){alert('目前還沒有可切換的有座標釣點。');return;}
+  let currentIndex=-1;
+  if(activeSpotContext?.kind==='catch')currentIndex=spots.findIndex(s=>s.recordIds.some(id=>activeSpotContext.recordIds.includes(id)));
+  const nextIndex=currentIndex>=0?(currentIndex+1)%spots.length:0;
+  activateFishingSpot(spots[nextIndex],true,nextIndex,true);
+}
+function saveMovedFishingSpot(){
+  if(!spotPositionDirty||!currentPoint){return;}
+  if(activeSpotContext?.kind==='catch'&&activeSpotContext.recordIds?.length){
+    const ids=new Set(activeSpotContext.recordIds);let changed=0;
+    catchRecords.forEach(r=>{if(ids.has(r.id)){r.lat=Number(currentPoint.lat);r.lon=Number(currentPoint.lon);r.accuracy=null;r.positionSource='地圖拖曳修改';changed++;}});
+    saveRecords();
+    const refreshed=findFishingSpotByRecordId(activeSpotContext.recordIds[0]);
+    if(refreshed)activateFishingSpot(refreshed,false,null,false);
+    renderRecords();renderMapFishFilters();renderSavedSpots();renderFishingSpotMarkers();
+    alert(`已儲存釣點新位置${changed>1?`，並同步更新 ${changed} 筆同一釣點的釣獲紀錄`:''}。`);
+    return;
+  }
+  if(activeSpotContext?.kind==='imported'&&activeSpotContext.savedSpotId){
+    const s=savedSpots.find(x=>x.id===activeSpotContext.savedSpotId);
+    if(!s){alert('找不到這個匯入釣點。');return;}
+    s.lat=Number(currentPoint.lat);s.lon=Number(currentPoint.lon);s.name=currentSpotName||s.name;s.updatedAt=new Date().toISOString();
+    saveSavedSpots();activateImportedSpot(s,false);renderFishingSpotMarkers();
+    alert('已儲存這個釣點的新位置。');
+    return;
+  }
+  alert('請先用「回到釣點」、點紅色釣點，或從有漁獲釣點清單選擇一個釣點，再拖曳並儲存。');
+}
+function centerOnPoint(){cycleFishingSpots();}
+function centerOnCurrentLocation(){if(!currentDevicePoint){alert('尚未取得手機目前位置，請先按定位。');return;}map.setView([currentDevicePoint.lat,currentDevicePoint.lon],16);}
+function updateCurrentLocation(pos,center=false){
+  const lat=Number(pos.coords?.latitude), lon=Number(pos.coords?.longitude), accuracy=Number(pos.coords?.accuracy);
+  if(!Number.isFinite(lat)||!Number.isFinite(lon))return;
+  currentDevicePoint={lat,lon,accuracy:Number.isFinite(accuracy)?accuracy:null,savedAt:new Date().toISOString()};
+  if(currentLocationMarker) currentLocationMarker.setLatLng([lat,lon]);
+  else currentLocationMarker=L.circleMarker([lat,lon],{radius:8,weight:3,color:'#e0f2fe',fillColor:'#38bdf8',fillOpacity:1}).addTo(map).bindPopup('手機目前位置');
+  if(currentLocationAccuracyCircle){map.removeLayer(currentLocationAccuracyCircle);currentLocationAccuracyCircle=null;}
+  if(Number.isFinite(accuracy)&&accuracy>0) currentLocationAccuracyCircle=L.circle([lat,lon],{radius:accuracy,weight:1,color:'#38bdf8',fillColor:'#38bdf8',fillOpacity:.06}).addTo(map);
+  const acc=Number.isFinite(accuracy)?`｜精度約 ±${Math.round(accuracy)} m`:'';
+  document.getElementById('currentLocationText').textContent=`${lat.toFixed(6)}, ${lon.toFixed(6)}${acc}`;
+  updateQuickLocationStatus();
+  if(center)map.setView([lat,lon],Math.max(map.getZoom(),16));
+}
+function locationErrorText(err){
+  return {1:'定位權限被拒絕，請到瀏覽器設定允許位置權限。',2:'目前無法取得手機位置，請稍後再試。',3:'定位逾時，系統會繼續嘗試更新。'}[err?.code]||'目前無法取得手機位置。';
+}
+function startLocationWatch(){
+  if(!navigator.geolocation){document.getElementById('currentLocationText').textContent='這個瀏覽器不支援手機定位。';if(!virtualLocationEnabled){const q=document.getElementById('quickLocationStatus');if(q)q.textContent='📍 本筆位置：此瀏覽器不支援定位';}return;}
+  if(currentWatchId!==null)return;
+  document.getElementById('currentLocationText').textContent='正在取得手機目前位置…';
+  if(!virtualLocationEnabled){const q=document.getElementById('quickLocationStatus');if(q)q.textContent='📍 本筆位置：正在取得手機目前位置…';}
+  currentWatchId=navigator.geolocation.watchPosition(
+    pos=>updateCurrentLocation(pos,false),
+    err=>{document.getElementById('currentLocationText').textContent=locationErrorText(err);if(!virtualLocationEnabled){const q=document.getElementById('quickLocationStatus');if(q)q.textContent=`📍 本筆位置：${locationErrorText(err)}`;}},
+    {enableHighAccuracy:true,maximumAge:3000,timeout:20000}
+  );
+}
+function locateMe(){
+  if(!navigator.geolocation){alert('這個瀏覽器不支援手機定位。');return;}
+  document.getElementById('currentLocationText').textContent='正在更新手機目前位置…';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    updateCurrentLocation(pos,true);
+    startLocationWatch();
+  },err=>{
+    document.getElementById('currentLocationText').textContent=locationErrorText(err);
+    alert(locationErrorText(err));
+  },{enableHighAccuracy:true,timeout:12000,maximumAge:1000});
+}
+function saveSpotName(){currentSpotName=document.getElementById('spotName').value.trim()||'目前釣點';document.getElementById('spotName').value=currentSpotName;if(activeSpotContext?.kind==='catch'){const ids=new Set(activeSpotContext.recordIds||[]);catchRecords.forEach(r=>{if(ids.has(r.id))r.spotName=currentSpotName;});saveRecords();activeSpotContext.name=currentSpotName;renderRecords();renderSavedSpots();}else if(activeSpotContext?.kind==='imported'&&activeSpotContext.savedSpotId){const s=savedSpots.find(x=>x.id===activeSpotContext.savedSpotId);if(s){s.name=currentSpotName;saveSavedSpots();activeSpotContext.name=currentSpotName;}}updatePointText();persistPoint();if(pointMarker)pointMarker.setPopupContent(currentSpotPopupHtml());renderFishingSpotMarkers();}
+
+function loadFishSpecies(){
+  const raw=localStorage.getItem('sunnyfish_fish_species_v1');
+  if(raw===null){
+    fishSpeciesList=[...DEFAULT_FISH_SPECIES];
+  }else{
+    try{const saved=JSON.parse(raw);if(Array.isArray(saved))fishSpeciesList=saved.filter(Boolean).map(v=>String(v).trim());}catch(e){fishSpeciesList=[...DEFAULT_FISH_SPECIES];}
+  }
+  fishSpeciesList=[...new Set(fishSpeciesList.filter(Boolean))];
+  saveFishSpecies();renderFishSpecies();
+}
+function saveFishSpecies(){localStorage.setItem('sunnyfish_fish_species_v1',JSON.stringify(fishSpeciesList));}
+function renderFishSpecies(preferred=''){
+  const sel=document.getElementById('fishSpeciesSelect');const old=preferred||sel.value;sel.innerHTML='';
+  if(!fishSpeciesList.length){const o=document.createElement('option');o.value='';o.textContent='請先新增魚種';sel.appendChild(o);} else fishSpeciesList.forEach(name=>{const o=document.createElement('option');o.value=name;o.textContent=name;sel.appendChild(o);});
+  if(fishSpeciesList.includes(old))sel.value=old;
+  const list=document.getElementById('fishSpeciesList');
+  list.innerHTML=fishSpeciesList.length?fishSpeciesList.map((name,i)=>`<div class="fish-item"><div class="fish-name">${esc(name)}</div><button class="btn btn-danger btn-small" onclick="deleteFishSpecies(${i})">刪除</button></div>`).join(''):'<div class="empty">目前沒有魚種，請先新增。</div>';
+}
+function toggleFishManager(){const el=document.getElementById('fishManager');el.style.display=el.style.display==='block'?'none':'block';if(el.style.display==='block')setTimeout(()=>document.getElementById('newFishSpeciesInput').focus(),30);}
+function addFishSpecies(){const input=document.getElementById('newFishSpeciesInput');const name=input.value.trim();if(!name){alert('請輸入魚種名稱。');return;}const exist=fishSpeciesList.find(v=>v.toLowerCase()===name.toLowerCase());if(!exist){fishSpeciesList.push(name);saveFishSpecies();renderFishSpecies(name);}else renderFishSpecies(exist);input.value='';}
+function deleteFishSpecies(index){
+  const name=fishSpeciesList[index];if(name==null)return;
+  if(!confirm(`要從魚種清單刪除「${name}」嗎？\n過去的釣獲紀錄不會受影響。`))return;
+  fishSpeciesList.splice(index,1);saveFishSpecies();renderFishSpecies();
+}
+
+
+function isValidSpotObject(s){
+  if(!s||typeof s!=='object')return false;
+  const lat=Number(s.lat),lon=Number(s.lon);
+  return Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180;
+}
+function normalizeSpot(s){
+  return {id:String(s.id||`spot_${Date.now()}_${Math.random().toString(36).slice(2,8)}`),name:String(s.name||'未命名釣點').trim()||'未命名釣點',lat:Number(s.lat),lon:Number(s.lon),createdAt:s.createdAt||new Date().toISOString(),source:String(s.source||'手動')};
+}
+function spotCoordKey(s){return `${Number(s.lat).toFixed(6)},${Number(s.lon).toFixed(6)}`;}
+function loadSavedSpots(){
+  try{
+    const x=JSON.parse(localStorage.getItem('sunnyfish_saved_spots_v1')||'[]');
+    savedSpots=Array.isArray(x)?x.filter(isValidSpotObject).map(normalizeSpot):[];
+  }catch(e){savedSpots=[];}
+  renderSavedSpots();
+}
+function saveSavedSpots(){
+  localStorage.setItem('sunnyfish_saved_spots_v1',JSON.stringify(savedSpots));
+  renderSavedSpots();
+}
+function uniqueSpotName(base,spots=savedSpots){
+  const clean=(String(base||'未命名釣點').trim()||'未命名釣點');
+  if(!spots.some(s=>String(s.name).trim()===clean))return clean;
+  let n=2;
+  while(spots.some(s=>String(s.name).trim()===`${clean} (${n})`))n++;
+  return `${clean} (${n})`;
+}
+function getCatchSpots(){
+  return getCyclableFishingSpots().map(s=>({name:s.name,lat:s.lat,lon:s.lon,catchCount:s.catchCount,totalQty:s.totalQty,source:'本機釣獲',latestSavedAt:s.latestSavedAt,recordIds:[...s.recordIds]}));
+}
+function getImportedSpots(){
+  return savedSpots.filter(s=>isValidSpotObject(s)&&String(s.source||'')==='匯入');
+}
+function getShareableSpots(){
+  const local=getCatchSpots().map(s=>({...s,kind:'local'}));
+  const imported=getImportedSpots().map(s=>({...s,kind:'imported'}));
+  const seen=new Set();
+  return [...local,...imported].filter(s=>{
+    const key=`${Number(s.lat).toFixed(5)},${Number(s.lon).toFixed(5)}`;
+    if(seen.has(key))return false;
+    seen.add(key);return true;
+  });
+}
+function renderSavedSpots(){
+  const el=document.getElementById('savedSpotList');
+  if(!el)return;
+  const spots=getShareableSpots();
+  if(!spots.length){
+    el.innerHTML='<div class="empty">目前還沒有可分享的釣點。先在有定位的狀態下記錄一筆釣獲。</div>';
+    return;
+  }
+  el.innerHTML=spots.map((s,i)=>`<div class="saved-spot-item">
+    <div class="saved-spot-main">
+      <div class="saved-spot-name">${esc(s.name)}</div>
+      <div class="saved-spot-coords">${Number(s.lat).toFixed(6)}, ${Number(s.lon).toFixed(6)}</div>
+      <div class="saved-spot-coords">${s.kind==='local'?`本機 ${esc(s.catchCount)} 筆釣獲・共 ${esc(s.totalQty)} 尾`:'朋友分享的釣點'}</div>
+    </div>
+    <div class="saved-spot-actions">
+      <button class="btn btn-dark btn-small" onclick="useShareableSpot(${i})">地圖</button>
+      <button class="btn btn-primary btn-small" onclick="copyShareableSpot(${i})">📋 複製</button>
+      ${s.kind==='imported'?`<button class="btn btn-danger btn-small" onclick="deleteImportedShareableSpot(${i})">刪除</button>`:''}
+    </div>
+  </div>`).join('');
+}
+function useShareableSpot(index){
+  const s=getShareableSpots()[index];if(!s)return;
+  if(spotPositionDirty&&!confirm('目前釣點已移動但尚未儲存。要放棄這次移動並切換釣點嗎？'))return;
+  if(s.kind==='local'){
+    const group=getCyclableFishingSpots().find(g=>spotKey(g.lat,g.lon,5)===spotKey(s.lat,s.lon,5));
+    if(group)activateFishingSpot(group,true,null,true);
+    else{currentSpotName=s.name||'目前釣點';document.getElementById('spotName').value=currentSpotName;setPoint(Number(s.lat),Number(s.lon),null,'有漁獲釣點',true);}
+  }else activateImportedSpot(s,true);
+  document.getElementById('spotShareStatus').textContent=`已在地圖顯示「${s.name}」。`;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function deleteImportedShareableSpot(index){
+  const s=getShareableSpots()[index];if(!s||s.kind!=='imported')return;
+  const realIndex=savedSpots.findIndex(x=>String(x.source||'')==='匯入'&&Number(x.lat)===Number(s.lat)&&Number(x.lon)===Number(s.lon)&&String(x.name)===String(s.name));
+  if(realIndex<0)return;
+  if(!confirm(`要刪除匯入釣點「${s.name}」嗎？`))return;
+  const deletedId=savedSpots[realIndex]?.id;
+  savedSpots.splice(realIndex,1);saveSavedSpots();
+  if(activeSpotContext?.kind==='imported'&&activeSpotContext.savedSpotId===deletedId){activeSpotContext=null;}
+  renderFishingSpotMarkers();
+}
+function makeSpotSharePayload(spots){
+  return {format:'sunnyfish-spots',version:3,exportedAt:new Date().toISOString(),spots:spots.filter(isValidSpotObject).map(s=>({name:String(s.name||'未命名釣點'),lat:Number(s.lat),lon:Number(s.lon)}))};
+}
+function makeSpotShareText(spots){
+  const clean=spots.filter(isValidSpotObject);
+  if(!clean.length)return '';
+  const lines=['=== SUNNYFISH-SPOTS-V3 ===','【有漁獲釣點分享】'];
+  clean.forEach((s,i)=>{
+    if(i)lines.push('---');
+    lines.push(`名稱: ${String(s.name||'未命名釣點').replace(/[\r\n]+/g,' ')}`);
+    lines.push(`緯度: ${Number(s.lat).toFixed(6)}`);
+    lines.push(`經度: ${Number(s.lon).toFixed(6)}`);
+  });
+  lines.push('=== END ===');
+  return lines.join('\n');
+}
+function setSpotExportText(text,status){
+  const box=document.getElementById('spotExportText');
+  if(box){box.value=text||'';if(text){box.focus();box.setSelectionRange(0,0);}}
+  if(status)document.getElementById('spotShareStatus').textContent=status;
+}
+async function copyTextDirect(text,successText){
+  if(!text){alert('目前沒有可複製的釣點。');return false;}
+  try{
+    if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(text);
+    else{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+    const st=document.getElementById('spotShareStatus');if(st)st.textContent=successText||'已複製，可直接貼到 LINE。';
+    return true;
+  }catch(err){
+    window.prompt('自動複製失敗，請長按／Ctrl+C 複製以下文字：',text);return false;
+  }
+}
+async function copyShareableSpot(index){
+  const s=getShareableSpots()[index];if(!s)return;
+  await copyTextDirect(makeSpotShareText([s]),`已複製「${s.name}」，可直接貼給朋友。`);
+}
+async function copyAllShareableSpots(){
+  const spots=getShareableSpots();if(!spots.length){alert('目前沒有可分享的釣點。');return;}
+  await copyTextDirect(makeSpotShareText(spots),`已複製 ${spots.length} 個釣點，可直接貼給朋友。`);
+}
+function exportShareableSpot(index){
+  const s=getShareableSpots()[index];if(!s)return;
+  setSpotExportText(makeSpotShareText([s]),`已產生「${s.name}」的分享文字，可按「複製全部文字」後貼給朋友。`);
+}
+function exportAllSavedSpots(){
+  const spots=getShareableSpots();
+  if(!spots.length){alert('目前沒有可分享的有漁獲釣點。');return;}
+  setSpotExportText(makeSpotShareText(spots),`已產生 ${spots.length} 個有漁獲釣點的分享文字。`);
+}
+async function copyAllSpotText(){
+  const box=document.getElementById('spotExportText');
+  const text=box?.value||'';
+  if(!text){alert('目前沒有可複製的分享文字。請先產生釣點文字。');return;}
+  try{
+    if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);}
+    else{
+      box.removeAttribute('readonly');box.select();document.execCommand('copy');box.setAttribute('readonly','');window.getSelection()?.removeAllRanges();
+    }
+    document.getElementById('spotShareStatus').textContent='已複製全部分享文字，可直接貼到 LINE 或其他訊息中。';
+  }catch(err){
+    box.focus();box.select();
+    alert('自動複製失敗，已幫你選取全部文字，請使用手機的「複製」或 Ctrl+C。');
+  }
+}
+function clearSpotExportText(){
+  const box=document.getElementById('spotExportText');if(box)box.value='';
+  document.getElementById('spotShareStatus').textContent='分享文字已清除。';
+}
+function parseSpotShareText(raw){
+  const text=String(raw||'').trim();
+  if(!text)return [];
+  // 相容舊版 JSON 文字：若有人把舊檔內容直接貼進來，仍可匯入。
+  try{
+    const data=JSON.parse(text);let incoming=[];
+    if(data?.format==='sunnyfish-spots'&&Array.isArray(data.spots))incoming=data.spots;
+    else if(Array.isArray(data))incoming=data;
+    else if(isValidSpotObject(data))incoming=[data];
+    if(incoming.length)return incoming.filter(isValidSpotObject).map(normalizeSpot);
+  }catch(e){}
+
+  const body=text.replace(/^.*?SUNNYFISH-SPOTS-V3.*?\n/s,'').replace(/===\s*END\s*===.*$/s,'').replace(/【有漁獲釣點分享】/g,'').trim();
+  const blocks=body.split(/\n\s*---\s*\n/);
+  const incoming=[];
+  blocks.forEach(block=>{
+    const name=(block.match(/(?:^|\n)\s*名稱\s*[:：]\s*(.+)/)?.[1]||'未命名釣點').trim();
+    const latRaw=block.match(/(?:^|\n)\s*緯度\s*[:：]\s*(-?\d+(?:\.\d+)?)/)?.[1];
+    const lonRaw=block.match(/(?:^|\n)\s*經度\s*[:：]\s*(-?\d+(?:\.\d+)?)/)?.[1];
+    const lat=Number(latRaw),lon=Number(lonRaw);
+    if(Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180)incoming.push(normalizeSpot({name,lat,lon}));
+  });
+  return incoming;
+}
+function importSpotsFromText(){
+  const input=document.getElementById('spotImportText');
+  const raw=input?.value||'';
+  if(!raw.trim()){alert('請先貼上朋友傳來的釣點分享文字。');return;}
+  try{
+    const incoming=parseSpotShareText(raw);
+    if(!incoming.length)throw new Error('沒有有效座標');
+    let added=0,skipped=0;
+    incoming.forEach(s=>{
+      const duplicate=getShareableSpots().some(x=>Number(x.lat).toFixed(5)===Number(s.lat).toFixed(5)&&Number(x.lon).toFixed(5)===Number(s.lon).toFixed(5));
+      if(duplicate){skipped++;return;}
+      s.name=uniqueSpotName(s.name,getShareableSpots());s.source='匯入';savedSpots.push(s);added++;
+    });
+    saveSavedSpots();
+    document.getElementById('spotShareStatus').textContent=`匯入完成：新增 ${added} 個有漁獲釣點${skipped?`，略過 ${skipped} 個重複位置`:''}。`;
+    if(added)input.value='';
+  }catch(err){
+    alert('無法辨識這段文字。請完整貼上由本釣魚紀錄網頁產生的釣點分享文字。');
+  }
+}
+
+function getRecordSpeciesStats(){
+  const counts=new Map();
+  catchRecords.forEach(r=>{
+    if(!r?.species)return;
+    if(!hasPosition(r))return;
+    counts.set(r.species,(counts.get(r.species)||0)+1);
+  });
+  return [...counts.entries()].sort((a,b)=>a[0].localeCompare(b[0],'zh-TW'));
+}
+function renderMapFishFilters(){
+  const box=document.getElementById('mapFishFilters');
+  const stats=getRecordSpeciesStats();
+  const available=new Set(stats.map(([name])=>name));
+  [...selectedMapFish].forEach(name=>{if(!available.has(name))selectedMapFish.delete(name);});
+  if(stats.length && selectedMapFish.size===0 && !box.dataset.userCleared){stats.forEach(([name])=>selectedMapFish.add(name));}
+  if(!stats.length){
+    box.innerHTML='<div class="empty" style="padding:0">目前沒有含位置的釣獲紀錄。</div>';
+    document.getElementById('mapFilterSummary').textContent='尚無可顯示的釣獲位置。';
+    updateCatchMarkers();
+    return;
+  }
+  box.innerHTML=stats.map(([name,count],i)=>{
+    const checked=selectedMapFish.has(name)?'checked':'';
+    return `<label class="fish-filter-chip"><input type="checkbox" ${checked} onchange="toggleMapFish(${i},this.checked)"><span>${esc(name)}</span><span class="count">${count}筆</span></label>`;
+  }).join('');
+  box._speciesOrder=stats.map(([name])=>name);
+  updateCatchMarkers(true);
+}
+function toggleMapFish(index,checked){
+  const box=document.getElementById('mapFishFilters');
+  const name=box._speciesOrder?.[index];if(!name)return;
+  if(checked)selectedMapFish.add(name);else selectedMapFish.delete(name);
+  box.dataset.userCleared=selectedMapFish.size===0?'1':'';
+  updateCatchMarkers(true);
+}
+function selectAllMapFish(){
+  const box=document.getElementById('mapFishFilters');
+  (box._speciesOrder||[]).forEach(name=>selectedMapFish.add(name));
+  box.dataset.userCleared='';
+  renderMapFishFilters();
+}
+function clearAllMapFish(){
+  selectedMapFish.clear();
+  const box=document.getElementById('mapFishFilters');box.dataset.userCleared='1';
+  renderMapFishFilters();
+}
+function makeCatchIcon(species){
+  const label=String(species||'魚').slice(0,4);
+  return L.divIcon({className:'catch-map-icon',html:`<div class="catch-map-pin">${esc(label)}</div>`,iconSize:[36,30],iconAnchor:[18,15],popupAnchor:[0,-15]});
+}
+function updateCatchMarkers(autoFit=false){
+  if(!distributionMap||!catchMarkerLayer)return;
+  catchMarkerLayer.clearLayers();
+  const positioned=catchRecords.filter(hasPosition);
+  const missingCount=catchRecords.length-positioned.length;
+  const visible=positioned.filter(r=>selectedMapFish.has(r.species));
+  visible.forEach(r=>{
+    const marker=L.marker([+r.lat,+r.lon],{icon:makeCatchIcon(r.species)}).addTo(catchMarkerLayer);
+    const note=r.note?`<br>備註：${esc(r.note)}`:'';
+    marker.bindPopup(`<strong>${esc(r.species)} × ${esc(r.quantity)}</strong><br>${esc(r.spotName||'未命名釣點')}<br>${esc(formatTime(r.savedAt))}${note}`);
+  });
+  const summary=document.getElementById('mapFilterSummary');
+  if(!positioned.length){
+    summary.textContent=catchRecords.length?`目前有 ${catchRecords.length} 筆釣獲紀錄，但都沒有位置座標，因此無法畫在分布地圖上。`:'尚無可顯示的釣獲位置。';
+  }else if(!selectedMapFish.size){
+    summary.textContent=`目前未勾選魚種。共有 ${positioned.length} 筆有位置紀錄${missingCount?`，另 ${missingCount} 筆沒有座標`:''}。`;
+  }else{
+    summary.textContent=`目前顯示 ${selectedMapFish.size} 種魚，共 ${visible.length} 筆有位置的釣獲${missingCount?`；另 ${missingCount} 筆沒有座標`:''}。`;
+  }
+  if(autoFit&&visible.length)fitCatchDistribution(false);
+}
+function fitCatchDistribution(showAlert=true){
+  if(!distributionMap||!catchMarkerLayer)return;
+  const layers=catchMarkerLayer.getLayers();
+  if(!layers.length){if(showAlert)alert('目前勾選的魚種沒有可顯示的位置紀錄。');return;}
+  const group=L.featureGroup(layers);
+  const bounds=group.getBounds();
+  if(bounds.isValid()){distributionMap.invalidateSize();distributionMap.fitBounds(bounds.pad(0.22),{maxZoom:16});}
+}
+
+function loadRecords(){try{const x=JSON.parse(localStorage.getItem('sunnyfish_catch_records_v1')||'[]');if(Array.isArray(x))catchRecords=x;}catch(e){catchRecords=[];}if(catchRecords.some(r=>hasPosition(r)))syncPointToLatestCatch(false);renderRecords();renderMapFishFilters();renderSavedSpots();renderFishingSpotMarkers();}
+function saveRecords(){localStorage.setItem('sunnyfish_catch_records_v1',JSON.stringify(catchRecords));}
+function syncPointToLatestCatch(center=false){
+  const spots=getCyclableFishingSpots();
+  if(!spots.length)return;
+  activateFishingSpot(spots[0],center,0,false);
+}
+function saveCatchRecord(){
+  const species=document.getElementById('fishSpeciesSelect').value;
+  const quantity=Math.max(1,parseInt(document.getElementById('catchQuantity').value,10)||1);
+  const note=document.getElementById('catchNote').value.trim();
+  const usingVirtual=!!(virtualLocationEnabled&&virtualLocationPoint);
+  const virtualNote=usingVirtual?(document.getElementById('virtualCatchNote')?.value||'').trim():'';
+  if(!species){alert('請先選擇魚種。');return;}
+  const p=usingVirtual?virtualLocationPoint:currentDevicePoint;
+  if(!p&&!confirm('目前尚未取得手機位置。這筆仍可記錄，但會沒有座標，也不會出現在地圖上。仍要記錄嗎？'))return;
+  const record={
+    id:`catch_${Date.now()}`,
+    savedAt:new Date().toISOString(),
+    species,quantity,note,virtualNote,
+    isVirtualPosition:usingVirtual,
+    spotName:'未命名釣點',
+    lat:p?Number(p.lat):null,lon:p?Number(p.lon):null,
+    accuracy:usingVirtual?null:(p?.accuracy??null),
+    positionSource:p?(usingVirtual?'虛擬現在位置（測試）':'手機目前位置（儲存當下）'):'未定位'
+  };
+  catchRecords.unshift(record);
+  catchRecords=catchRecords.slice(0,500);saveRecords();
+  renderRecords();renderMapFishFilters();renderSavedSpots();renderFishingSpotMarkers();
+  document.getElementById('catchQuantity').value='1';document.getElementById('catchNote').value='';if(usingVirtual){const v=document.getElementById('virtualCatchNote');if(v)v.value='';}
+  const st=document.getElementById('quickSaveStatus');
+  if(st){
+    st.style.display='block';
+    st.innerHTML=`✅ 已記錄 <strong>${esc(species)} × ${esc(quantity)}</strong>${usingVirtual?'<br><span style="color:#d8b4fe">🟣 虛擬位置測試紀錄</span>':''}${p?`<br>📍 ${Number(p.lat).toFixed(6)}, ${Number(p.lon).toFixed(6)}`:'<br>📍 無位置座標'}${usingVirtual&&virtualNote?`<br>📝 虛擬備註：${esc(virtualNote)}`:''}<br><button class="btn btn-dark btn-small" onclick="editLatestRecordSpot()">✏️ 幫這個釣點命名</button>`;
+  }
+}
+function editLatestRecordSpot(){
+  if(!catchRecords.length)return;
+  const id=catchRecords[0].id;
+  editRecordSpot(id);
+  document.getElementById('catchLogList')?.scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(()=>document.getElementById(`spot_name_${id}`)?.focus(),350);
+}
+function deleteRecord(id){if(!confirm('要刪除這筆釣獲紀錄嗎？'))return;catchRecords=catchRecords.filter(r=>r.id!==id);saveRecords();activeSpotContext=null;spotCycleIndex=-1;if(catchRecords.some(r=>hasPosition(r)))syncPointToLatestCatch(false);else{if(pointMarker){map.removeLayer(pointMarker);pointMarker=null;}currentPoint=null;localStorage.removeItem('sunnyfish_current_point_v1');updatePointText();}renderRecords();renderMapFishFilters();renderSavedSpots();renderFishingSpotMarkers();}
+function showRecordOnMap(id){const r=catchRecords.find(x=>x.id===id);if(!hasPosition(r)){alert('這筆紀錄沒有位置資料。');return;}if(spotPositionDirty&&!confirm('目前釣點已移動但尚未儲存。要放棄這次移動並切換嗎？'))return;const g=findFishingSpotByRecordId(id);if(g)activateFishingSpot(g,true,null,true);window.scrollTo({top:0,behavior:'smooth'});}
+function editRecordNote(id){
+  const view=document.getElementById(`note_view_${id}`);
+  const edit=document.getElementById(`note_edit_${id}`);
+  if(view)view.style.display='none';if(edit)edit.style.display='block';
+}
+function cancelRecordNote(id){renderRecords();}
+function saveRecordNote(id){
+  const r=catchRecords.find(x=>x.id===id);if(!r)return;
+  const ta=document.getElementById(`note_text_${id}`);r.note=(ta?.value||'').trim();
+  if(r.isVirtualPosition){const vta=document.getElementById(`virtual_note_text_${id}`);r.virtualNote=(vta?.value||'').trim();}
+  saveRecords();renderRecords();renderMapFishFilters();
+}
+function editRecordSpot(id){
+  const view=document.getElementById(`spot_view_${id}`);
+  const edit=document.getElementById(`spot_edit_${id}`);
+  if(view)view.style.display='none';if(edit)edit.style.display='block';
+}
+function cancelRecordSpot(id){renderRecords();}
+function saveRecordSpot(id){
+  const r=catchRecords.find(x=>x.id===id);if(!r)return;
+  const name=(document.getElementById(`spot_name_${id}`)?.value||'').trim()||'未命名釣點';
+  const latRaw=(document.getElementById(`spot_lat_${id}`)?.value||'').trim();
+  const lonRaw=(document.getElementById(`spot_lon_${id}`)?.value||'').trim();
+  if((latRaw&&!lonRaw)||(!latRaw&&lonRaw)){alert('緯度、經度請一起填寫，或兩欄都留空。');return;}
+  if(latRaw&&lonRaw){
+    const lat=Number(latRaw),lon=Number(lonRaw);
+    if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<-90||lat>90||lon<-180||lon>180){alert('座標格式不正確，請確認緯度 -90～90、經度 -180～180。');return;}
+    r.lat=lat;r.lon=lon;r.positionSource='手動修改';r.accuracy=null;
+  }else{r.lat=null;r.lon=null;r.positionSource='未定位';r.accuracy=null;}
+  r.spotName=name;
+  saveRecords();
+  if(activeSpotContext?.kind==='catch'&&activeSpotContext.recordIds?.includes(id)&&hasPosition(r)){const g=findFishingSpotByRecordId(id);if(g)activateFishingSpot(g,false,null,false);}
+  renderRecords();renderMapFishFilters();renderSavedSpots();renderFishingSpotMarkers();
+}
+function useCurrentLocationForRecord(id){
+  if(!currentDevicePoint){alert('尚未取得手機目前位置；請確認瀏覽器已允許定位，或按上方「重新啟用／更新目前位置」。');return;}
+  const lat=document.getElementById(`spot_lat_${id}`),lon=document.getElementById(`spot_lon_${id}`);
+  if(lat)lat.value=currentDevicePoint.lat.toFixed(6);if(lon)lon.value=currentDevicePoint.lon.toFixed(6);
+}
+function renderRecords(){
+  const el=document.getElementById('catchLogList');if(!catchRecords.length){el.innerHTML='<div class="empty">尚無釣獲紀錄。</div>';return;}
+  el.innerHTML=catchRecords.map(r=>{
+    const hasPos=hasPosition(r);
+    const posBtn=hasPos?`<button class="btn btn-dark btn-small" onclick="showRecordOnMap('${esc(r.id)}')">地圖</button>`:'';
+    const noteText=r.note?`備註：${esc(r.note)}`:'尚未填寫備註';
+    const virtualBadge=r.isVirtualPosition?'<span class="virtual-badge">虛擬測試</span>':'';
+    const virtualNoteView=r.isVirtualPosition?`<div class="record-virtual-note">虛擬備註：${r.virtualNote?esc(r.virtualNote):'尚未填寫'}</div>`:'';
+    return `<div class="record">
+      <div class="record-main">
+        <div class="record-title">${virtualBadge}${esc(r.species)} × ${esc(r.quantity)}｜${esc(r.spotName||'未命名釣點')}</div>
+        <div id="spot_view_${esc(r.id)}" class="record-meta">${esc(formatTime(r.savedAt))}${hasPos?`｜${Number(r.lat).toFixed(5)}, ${Number(r.lon).toFixed(5)}`:'｜無位置座標'}</div>
+        <div id="spot_edit_${esc(r.id)}" class="record-spot-edit" style="display:none">
+          <input id="spot_name_${esc(r.id)}" value="${esc(r.spotName||'未命名釣點')}" placeholder="釣點名稱">
+          <div class="record-spot-grid">
+            <input id="spot_lat_${esc(r.id)}" inputmode="decimal" value="${hasPos?esc(Number(r.lat).toFixed(6)):''}" placeholder="緯度 Latitude">
+            <input id="spot_lon_${esc(r.id)}" inputmode="decimal" value="${hasPos?esc(Number(r.lon).toFixed(6)):''}" placeholder="經度 Longitude">
+          </div>
+          <div class="row" style="margin-top:6px;gap:6px">
+            <button class="btn btn-dark btn-small" onclick="useCurrentLocationForRecord('${esc(r.id)}')">用目前位置座標</button>
+            <button class="btn btn-primary btn-small" onclick="saveRecordSpot('${esc(r.id)}')">儲存釣點</button>
+            <button class="btn btn-dark btn-small" onclick="cancelRecordSpot('${esc(r.id)}')">取消</button>
+          </div>
+        </div>
+        <div id="note_view_${esc(r.id)}" class="record-note">${noteText}${virtualNoteView}</div>
+        <div id="note_edit_${esc(r.id)}" class="record-note-edit" style="display:none">
+          <textarea id="note_text_${esc(r.id)}" placeholder="例如：餌別、尺寸、咬況、放流等">${esc(r.note||'')}</textarea>
+          ${r.isVirtualPosition?`<textarea id="virtual_note_text_${esc(r.id)}" style="margin-top:6px;border-color:#7e22ce" placeholder="虛擬備註（測試用途）">${esc(r.virtualNote||'')}</textarea>`:''}
+          <div class="row" style="margin-top:6px;gap:6px">
+            <button class="btn btn-primary btn-small" onclick="saveRecordNote('${esc(r.id)}')">儲存備註</button>
+            <button class="btn btn-dark btn-small" onclick="cancelRecordNote('${esc(r.id)}')">取消</button>
+          </div>
+        </div>
+      </div>
+      <div class="record-actions">
+        ${posBtn}
+        <button class="btn btn-dark btn-small" onclick="editRecordSpot('${esc(r.id)}')">修改釣點</button>
+        <button class="btn btn-dark btn-small" onclick="editRecordNote('${esc(r.id)}')">修改備註</button>
+        <button class="btn btn-danger btn-small" onclick="deleteRecord('${esc(r.id)}')">刪除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('newFishSpeciesInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addFishSpecies();}});
+loadFishSpecies();initMap();loadSavedSpots();loadRecords();startLocationWatch();document.addEventListener('visibilitychange',()=>{if(!document.hidden)startLocationWatch();});
+</script>
+
+<script>
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
