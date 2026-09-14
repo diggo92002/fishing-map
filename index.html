@@ -420,7 +420,8 @@ function uniqueSpotName(base,spots=savedSpots){
   return `${clean} (${n})`;
 }
 function getCatchSpots(){
-  return getCyclableFishingSpots().map(s=>({name:s.name,lat:s.lat,lon:s.lon,catchCount:s.catchCount,totalQty:s.totalQty,source:'本機釣獲',latestSavedAt:s.latestSavedAt,recordIds:[...s.recordIds]}));
+  // 分享清單與匯出文字的第一行以最新一筆釣獲的魚種為主，避免顯示預設的未命名釣點。
+  return getCyclableFishingSpots().map(s=>({name:s.latestSpecies||s.name,lat:s.lat,lon:s.lon,catchCount:s.catchCount,totalQty:s.totalQty,source:'本機釣獲',latestSavedAt:s.latestSavedAt,recordIds:[...s.recordIds]}));
 }
 function getImportedSpots(){
   return savedSpots.filter(s=>isValidSpotObject(s)&&String(s.source||'')==='匯入');
