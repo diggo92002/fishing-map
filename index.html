@@ -26,6 +26,7 @@
 .share-collapse{padding:0;overflow:hidden}.share-summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;color:var(--blue);font-weight:800;font-size:1rem}.share-summary::-webkit-details-marker{display:none}.share-summary::after{content:"＋";color:var(--muted);font-size:1.15rem;font-weight:900}.share-collapse[open] .share-summary::after{content:"－"}.share-summary-hint{margin-left:auto;color:var(--muted);font-size:.72rem;font-weight:600}.share-collapse-body{border-top:1px solid var(--line);padding:14px}.share-collapse:not([open]) .share-summary{margin:0}.quick-location-status{margin-top:10px;background:#0f172a;border:1px solid #0ea5e9;border-radius:9px;padding:10px;font-size:.8rem;line-height:1.5;color:#dbeafe}.quick-location-status strong{color:#38bdf8}.quick-save-status{display:none;margin-top:9px;background:#052e16;border:1px solid #16a34a;border-radius:9px;padding:10px;font-size:.8rem;line-height:1.5;color:#dcfce7}.quick-save-status .btn{margin-top:7px}.mode-note{margin-top:7px;color:#94a3b8;font-size:.73rem;line-height:1.5}
 .share-collapse{padding:0;overflow:hidden}.share-summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;color:var(--blue);font-weight:800;font-size:1rem}.share-summary::-webkit-details-marker{display:none}.share-summary::after{content:"＋";color:var(--muted);font-size:1.15rem;font-weight:900}.share-collapse[open] .share-summary::after{content:"－"}.share-summary-hint{margin-left:auto;color:var(--muted);font-size:.72rem;font-weight:600}.share-collapse-body{border-top:1px solid var(--line);padding:14px}.share-collapse:not([open]) .share-summary{margin:0}.quick-location-status{margin-top:10px;background:#0f172a;border:1px solid #0ea5e9;border-radius:9px;padding:10px;font-size:.8rem;line-height:1.5;color:#dbeafe}.quick-location-status strong{color:#38bdf8}.quick-save-status{display:none;margin-top:9px;background:#052e16;border:1px solid #16a34a;border-radius:9px;padding:10px;font-size:.8rem;line-height:1.5;color:#dcfce7}.quick-save-status .btn{margin-top:7px}.mode-note{margin-top:7px;color:#94a3b8;font-size:.73rem;line-height:1.5}.record-note-edit label{display:block;margin-top:7px;margin-bottom:4px;font-size:.78rem;color:var(--muted)}
 @media(max-width:520px){.app{padding:calc(18px + env(safe-area-inset-top)) 10px calc(28px + env(safe-area-inset-bottom))}.grid2{grid-template-columns:1fr 92px}.row.mobile-stack{display:grid;grid-template-columns:1fr 1fr}.row.mobile-stack .btn{width:100%}#map,#distributionMap{height:250px}.record{padding:9px}.header h1{font-size:1.2rem}.title-row{align-items:flex-start}.title-actions{gap:4px}.title-actions .btn{padding:6px 7px;font-size:.72rem}}
+.legend-shared{background:#a855f7}
 </style>
 </head>
 <body>
@@ -53,7 +54,7 @@
       <div id="currentLocationText" class="coords">正在等待手機定位權限…</div>
     </div>
     <div id="map"></div>
-    <div class="map-legend"><span><span class="legend-dot legend-now"></span>手機目前位置</span><span><span class="legend-dot legend-spot"></span>歷史釣點（可拖曳整理）</span></div>
+    <div class="map-legend"><span><span class="legend-dot legend-now"></span>手機目前位置</span><span><span class="legend-dot legend-spot"></span>歷史釣點（可拖曳整理）</span><span><span class="legend-dot legend-shared"></span>朋友分享的釣點</span></div>
     <div class="row" style="margin-top:8px">
       <button id="savePointBtn" class="btn btn-green grow" onclick="saveMovedFishingSpot()" disabled>💾 儲存拖曳後的釣點位置</button>
     </div>
@@ -266,6 +267,16 @@ function renderFishingSpotMarkers(){
     });
     marker.addTo(spotHistoryLayer);
   });
+  getImportedSpots().forEach(spot=>{
+    if(activeSpotContext?.kind==='imported'&&activeSpotContext.savedSpotId===spot.id)return;
+    const marker=L.circleMarker([spot.lat,spot.lon],{radius:7,weight:2,color:'#ffffff',fillColor:'#a855f7',fillOpacity:.95});
+    marker.bindPopup(`<strong>${esc(spot.name)}</strong><br><span style="font-size:11px;color:#64748b">朋友分享的釣點</span><br>${Number(spot.lat).toFixed(6)}, ${Number(spot.lon).toFixed(6)}`);
+    marker.on('click',()=>{
+      if(spotPositionDirty&&!confirm('目前釣點已移動但尚未儲存。要放棄這次移動並切換到其他釣點嗎？'))return;
+      activateImportedSpot(spot,true);
+    });
+    marker.addTo(spotHistoryLayer);
+  });
 }
 function activateFishingSpotByRecordId(id,center=true,openPopup=false){
   const record=catchRecords.find(r=>r.id===id);if(!record||!hasPosition(record))return;
@@ -411,6 +422,7 @@ function loadSavedSpots(){
 function saveSavedSpots(){
   localStorage.setItem('sunnyfish_saved_spots_v1',JSON.stringify(savedSpots));
   renderSavedSpots();
+  renderFishingSpotMarkers();
 }
 function uniqueSpotName(base,spots=savedSpots){
   const clean=(String(base||'未命名釣點').trim()||'未命名釣點');
