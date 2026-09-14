@@ -35,9 +35,14 @@
     <p>快速記魚・藍點即時定位・紅點歷史釣點<br><span style="opacity:.7">iPhone PWA 真實定位版 v0.26.0</span></p>
   </div>
 
-  <section class="card">
+  <details id="locationMapDetails" class="card share-collapse">
+    <summary class="share-summary">
+      <span>📍 現在位置／釣點地圖</span>
+      <span class="share-summary-hint">點此展開／收合</span>
+    </summary>
+    <div class="share-collapse-body">
     <div class="title-row">
-      <div class="title">📍 現在位置／釣點地圖</div>
+      <div class="title">位置控制</div>
       <div class="title-actions">
         <button id="autoCenterToggleBtn" class="btn btn-primary btn-small" onclick="toggleAutoCenter()">自動回到目前位置</button>
         <button id="locationUpdateToggleBtn" class="btn btn-dark btn-small" onclick="toggleLocationUpdates()">開啟定位更新</button>
@@ -53,7 +58,8 @@
       <button id="savePointBtn" class="btn btn-green grow" onclick="saveMovedFishingSpot()" disabled>💾 儲存拖曳後的釣點位置</button>
     </div>
     <input id="spotName" type="hidden" value="未命名釣點" />
-  </section>
+    </div>
+  </details>
 
 
   <section class="card">
@@ -801,6 +807,9 @@ document.getElementById('newFishSpeciesInput').addEventListener('keydown',e=>{if
 ensureTestControls();
 loadFishSpecies();initMap();loadSavedSpots();loadRecords();updateAutoCenterUi();startLocationWatch();document.addEventListener('visibilitychange',()=>{if(!document.hidden&&locationUpdatesEnabled)requestLocationUpdate(false);});
 document.getElementById('distributionDetails').addEventListener('toggle',e=>{if(e.target.open)setTimeout(()=>distributionMap?.invalidateSize(),50);});
+const locationMapDetails=document.getElementById('locationMapDetails');
+locationMapDetails.open=localStorage.getItem('sunnyfish_location_map_open_v1')==='1';
+locationMapDetails.addEventListener('toggle',e=>{localStorage.setItem('sunnyfish_location_map_open_v1',e.target.open?'1':'0');if(e.target.open)setTimeout(()=>map?.invalidateSize(),50);});
 </script>
 
 </body>
