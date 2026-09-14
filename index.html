@@ -62,7 +62,7 @@
   </details>
 
 
-  <section class="card">
+  <section id="quickCatchCard" class="card">
     <div class="title">🐟 快速記錄釣獲</div>
     <div class="field">
       <label for="fishSpeciesSelect">釣獲魚種</label>
@@ -253,21 +253,16 @@ function getCyclableFishingSpots(){
   return [...groups.values()].sort((a,b)=>b.latestTime-a.latestTime||String(a.name).localeCompare(String(b.name),'zh-TW'));
 }
 function findFishingSpotByRecordId(id){return getCyclableFishingSpots().find(s=>s.recordIds.includes(id))||null;}
-function isSameActiveCatchSpot(s){
-  if(!s||activeSpotContext?.kind!=='catch')return false;
-  return s.recordIds.includes(activeSpotContext.recordId);
-}
 function renderFishingSpotMarkers(){
   if(!spotHistoryLayer)return;
   spotHistoryLayer.clearLayers();
-  const spots=getCyclableFishingSpots();
-  spots.forEach((s,i)=>{
-    if(isSameActiveCatchSpot(s))return;
-    const marker=L.circleMarker([s.lat,s.lon],{radius:7,weight:2,color:'#ffffff',fillColor:'#ef4444',fillOpacity:.95});
-    marker.bindPopup(`<strong>${esc(s.latestSpecies)} × ${esc(s.latestQty)}</strong><br>${Number(s.lat).toFixed(6)}, ${Number(s.lon).toFixed(6)}<br><span style="font-size:11px;color:#64748b">${esc(formatTime(s.latestSavedAt))}</span>`);
+  catchRecords.filter(hasPosition).forEach(record=>{
+    if(activeSpotContext?.kind==='catch'&&activeSpotContext.recordId===record.id)return;
+    const marker=L.circleMarker([record.lat,record.lon],{radius:7,weight:2,color:'#ffffff',fillColor:'#ef4444',fillOpacity:.95});
+    marker.bindPopup(`<strong>${esc(record.species)} × ${esc(record.quantity)}</strong><br>${Number(record.lat).toFixed(6)}, ${Number(record.lon).toFixed(6)}<br><span style="font-size:11px;color:#64748b">${esc(formatTime(record.savedAt))}</span>`);
     marker.on('click',()=>{
       if(spotPositionDirty&&!confirm('目前釣點已移動但尚未儲存。要放棄這次移動並切換到其他釣點嗎？'))return;
-      activateFishingSpotByRecordId(s.latestRecordId,true,true);
+      activateFishingSpotByRecordId(record.id,true,true);
     });
     marker.addTo(spotHistoryLayer);
   });
@@ -377,6 +372,11 @@ function loadFishSpecies(){
   saveFishSpecies();renderFishSpecies();
 }
 function saveFishSpecies(){localStorage.setItem('sunnyfish_fish_species_v1',JSON.stringify(fishSpeciesList));}
+function prioritizeFishSpecies(species){
+  if(!species||!fishSpeciesList.includes(species))return;
+  fishSpeciesList=[species,...fishSpeciesList.filter(name=>name!==species)];
+  saveFishSpecies();renderFishSpecies(species);
+}
 function renderFishSpecies(preferred=''){
   const sel=document.getElementById('fishSpeciesSelect');const old=preferred||sel.value;sel.innerHTML='';
   if(!fishSpeciesList.length){const o=document.createElement('option');o.value='';o.textContent='請先新增魚種';sel.appendChild(o);} else fishSpeciesList.forEach(name=>{const o=document.createElement('option');o.value=name;o.textContent=name;sel.appendChild(o);});
@@ -670,49 +670,45 @@ function fitCatchDistribution(showAlert=true){
   if(bounds.isValid()){distributionMap.invalidateSize();distributionMap.fitBounds(bounds.pad(0.22),{maxZoom:16});}
 }
 
-function loadRecords(){try{const x=JSON.parse(localStorage.getItem('sunnyfish_catch_records_v1')||'[]');if(Array.isArray(x))catchRecords=x;}catch(e){catchRecords=[];}if(catchRecords.some(r=>hasPosition(r)))syncPointToLatestCatch(false);renderRecords();renderMapFishFilters();renderSavedSpots();renderFishingSpotMarkers();}
+function loadRecords(){
+  try{const x=JSON.parse(localStorage.getItem('sunnyfish_catch_records_v1')||'[]');if(Array.isArray(x))catchRecords=x;}catch(e){catchRecords=[];}
+  const latest=[...catchRecords].filter(r=>r?.species).sort((a,b)=>Date.parse(b.savedAt||0)-Date.parse(a.savedAt||0))[0];
+  if(latest)prioritizeFishSpecies(latest.species);
+  if(catchRecords.some(r=>hasPosition(r)))syncPointToLatestCatch(false);
+  renderRecords();renderMapFishFilters();renderSavedSpots();renderFishingSpotMarkers();
+}
 function saveRecords(){localStorage.setItem('sunnyfish_catch_records_v1',JSON.stringify(catchRecords));}
 function syncPointToLatestCatch(center=false){
   const spots=getCyclableFishingSpots();
   if(!spots.length)return;
   activateFishingSpotByRecordId(spots[0].latestRecordId,center,false);
 }
- function autoFillCatchFields(point){
-  if(!point)return;
-  const lat=Number(point.lat),lon=Number(point.lon),rad=Math.PI/180;
-  if(!Number.isFinite(lat)||!Number.isFinite(lon))return;
-  const distance=s=>{const dLat=(Number(s.lat)-lat)*rad,dLon=(Number(s.lon)-lon)*rad,x=Math.sin(dLat/2)**2+Math.cos(lat*rad)*Math.cos(Number(s.lat)*rad)*Math.sin(dLon/2)**2;return 6371000*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));};
-  const candidates=[...getCyclableFishingSpots(),...getImportedSpots()].filter(hasPosition).sort((a,b)=>distance(a)-distance(b));
-  const nearest=candidates[0];
-  if(!nearest||distance(nearest)>5000)return;
-  const select=document.getElementById('fishSpeciesSelect');
-  if(select&&nearest.latestSpecies&&[...select.options].some(o=>o.value===nearest.latestSpecies))select.value=nearest.latestSpecies;
- }
+function randomTaiwanTestPoint(){
+  return {lat:21.9+Math.random()*3.7,lon:119.9+Math.random()*2.3,accuracy:null};
+}
 function saveCatchRecord(){
   const species=document.getElementById('fishSpeciesSelect').value;
   const quantity=1;
   const note='';
   if(!species){alert('請先選擇魚種。');return;}
-  const p=hasFreshDevicePosition()?currentDevicePoint:null;
-  autoFillCatchFields(p);
-  const selectedSpecies=document.getElementById('fishSpeciesSelect').value;
+  const hasRealPosition=hasFreshDevicePosition();
+  const p=hasRealPosition?currentDevicePoint:randomTaiwanTestPoint();
   const record={
     id:`catch_${Date.now()}`,
     savedAt:new Date().toISOString(),
     species,quantity,note,
     spotName:'',
-    lat:p?Number(p.lat):null,lon:p?Number(p.lon):null,
-    accuracy:p?.accuracy??null,
-    positionSource:p?'手機目前位置（儲存當下）':'待補位置'
+    lat:Number(p.lat),lon:Number(p.lon),
+    accuracy:p.accuracy??null,
+    positionSource:hasRealPosition?'手機目前位置（儲存當下）':'隨機測試位置（台灣附近）'
   };
-  record.species=selectedSpecies||record.species;
   catchRecords.unshift(record);
-  catchRecords=catchRecords.slice(0,500);saveRecords();
+  catchRecords=catchRecords.slice(0,500);saveRecords();prioritizeFishSpecies(record.species);
   renderRecords();renderMapFishFilters();renderSavedSpots();renderFishingSpotMarkers();
   const st=document.getElementById('quickSaveStatus');
   if(st){
     st.style.display='block';
-    st.innerHTML=`✅ 已記錄 <strong>${esc(species)} × ${esc(quantity)}</strong>${p?`<br>📍 ${Number(p.lat).toFixed(6)}, ${Number(p.lon).toFixed(6)}`:'<br>📍 尚未定位'}`;
+    st.innerHTML=`✅ 已記錄 <strong>${esc(species)} × ${esc(quantity)}</strong><br>📍 ${Number(p.lat).toFixed(6)}, ${Number(p.lon).toFixed(6)}${hasRealPosition?'':'<br>🧪 此筆使用隨機台灣附近測試位置'}`;
   }
 }
 function editLatestRecordSpot(){
@@ -771,7 +767,8 @@ function renderRecords(){
     const noteText=r.note?`備註：${esc(r.note)}`:'尚未填寫備註';
     return `<div class="record">
       <div class="record-main">
-        <div class="record-meta">${esc(formatTime(r.savedAt))}${hasPos?`｜${Number(r.lat).toFixed(5)}, ${Number(r.lon).toFixed(5)}`:'｜尚未定位'}</div>
+        <div class="record-title">${esc(r.species)} × ${esc(r.quantity)}</div>
+        <div class="record-meta">${esc(formatTime(r.savedAt))}${hasPos?`｜${Number(r.lat).toFixed(5)}, ${Number(r.lon).toFixed(5)}`:'｜尚未定位'}${r.positionSource==='隨機測試位置（台灣附近）'?'｜🧪 隨機測試位置':''}</div>
         <div id="note_view_${esc(r.id)}" class="record-note">${noteText}</div>
         <div id="note_edit_${esc(r.id)}" class="record-note-edit" style="display:none">
           <label for="quantity_text_${esc(r.id)}">數量</label>
@@ -808,6 +805,7 @@ ensureTestControls();
 loadFishSpecies();initMap();loadSavedSpots();loadRecords();updateAutoCenterUi();startLocationWatch();document.addEventListener('visibilitychange',()=>{if(!document.hidden&&locationUpdatesEnabled)requestLocationUpdate(false);});
 document.getElementById('distributionDetails').addEventListener('toggle',e=>{if(e.target.open)setTimeout(()=>distributionMap?.invalidateSize(),50);});
 const locationMapDetails=document.getElementById('locationMapDetails');
+locationMapDetails.parentNode.insertBefore(document.getElementById('quickCatchCard'),locationMapDetails);
 locationMapDetails.open=localStorage.getItem('sunnyfish_location_map_open_v1')==='1';
 locationMapDetails.addEventListener('toggle',e=>{localStorage.setItem('sunnyfish_location_map_open_v1',e.target.open?'1':'0');if(e.target.open)setTimeout(()=>map?.invalidateSize(),50);});
 </script>
