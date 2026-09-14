@@ -494,11 +494,6 @@ function makeSpotShareText(spots){
   lines.push('=== END ===');
   return lines.join('\n');
 }
-function setSpotExportText(text,status){
-  const box=document.getElementById('spotExportText');
-  if(box){box.value=text||'';if(text){box.focus();box.setSelectionRange(0,0);}}
-  if(status)document.getElementById('spotShareStatus').textContent=status;
-}
 async function copyTextDirect(text,successText){
   if(!text){alert('目前沒有可複製的釣點。');return false;}
   try{
@@ -517,34 +512,6 @@ async function copyShareableSpot(index){
 async function copyAllShareableSpots(){
   const spots=getShareableSpots();if(!spots.length){alert('目前沒有可分享的釣點。');return;}
   await copyTextDirect(makeSpotShareText(spots),`已複製 ${spots.length} 個釣點，可直接貼給朋友。`);
-}
-function exportShareableSpot(index){
-  const s=getShareableSpots()[index];if(!s)return;
-  setSpotExportText(makeSpotShareText([s]),`已產生「${s.name}」的分享文字，可按「複製全部文字」後貼給朋友。`);
-}
-function exportAllSavedSpots(){
-  const spots=getShareableSpots();
-  if(!spots.length){alert('目前沒有可分享的有漁獲釣點。');return;}
-  setSpotExportText(makeSpotShareText(spots),`已產生 ${spots.length} 個有漁獲釣點的分享文字。`);
-}
-async function copyAllSpotText(){
-  const box=document.getElementById('spotExportText');
-  const text=box?.value||'';
-  if(!text){alert('目前沒有可複製的分享文字。請先產生釣點文字。');return;}
-  try{
-    if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);}
-    else{
-      box.removeAttribute('readonly');box.select();document.execCommand('copy');box.setAttribute('readonly','');window.getSelection()?.removeAllRanges();
-    }
-    document.getElementById('spotShareStatus').textContent='已複製全部分享文字，可直接貼到 LINE 或其他訊息中。';
-  }catch(err){
-    box.focus();box.select();
-    alert('自動複製失敗，已幫你選取全部文字，請使用手機的「複製」或 Ctrl+C。');
-  }
-}
-function clearSpotExportText(){
-  const box=document.getElementById('spotExportText');if(box)box.value='';
-  document.getElementById('spotShareStatus').textContent='分享文字已清除。';
 }
 function parseSpotShareText(raw){
   const text=String(raw||'').trim();
@@ -791,18 +758,7 @@ function renderRecords(){
   }).join('');
 }
 
-function ensureTestControls(){
-  if(!document.getElementById('spotExportText')){
-    const status=document.getElementById('spotShareStatus');
-    if(status){
-      const box=document.createElement('div'); box.className='share-text-box';
-      box.innerHTML='<label for="spotExportText">匯出釣點文字</label><textarea id="spotExportText" class="share-textarea" readonly placeholder="按下複製釣點後，內容會顯示在這裡"></textarea><div class="spot-share-actions"><button class="btn btn-dark" type="button" onclick="copyAllSpotText()">複製匯出文字</button><button class="btn btn-dark" type="button" onclick="clearSpotExportText()">清除</button></div>';
-      status.parentNode.insertBefore(box,status);
-    }
-  }
-}
 document.getElementById('newFishSpeciesInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addFishSpecies();}});
-ensureTestControls();
 loadFishSpecies();initMap();loadSavedSpots();loadRecords();updateAutoCenterUi();startLocationWatch();document.addEventListener('visibilitychange',()=>{if(!document.hidden&&locationUpdatesEnabled)requestLocationUpdate(false);});
 document.getElementById('distributionDetails').addEventListener('toggle',e=>{if(e.target.open)setTimeout(()=>distributionMap?.invalidateSize(),50);});
 const locationMapDetails=document.getElementById('locationMapDetails');
