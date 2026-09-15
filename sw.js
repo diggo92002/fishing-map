@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fishing-record-v1.0.0';
+const CACHE_NAME = 'fishing-record-v1.1.0';
 const APP_SHELL = [
   './',
   './index.html',
@@ -23,15 +23,20 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  // 地圖圖磚數量龐大，不寫入離線快取，避免佔滿手機空間。
+  if (url.hostname.endsWith('tile.openstreetmap.org')) {
+    event.respondWith(fetch(event.request).catch(() => Response.error()));
+    return;
+  }
   event.respondWith(
     caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
       const copy = response.clone();
-      // Leaflet is loaded from its CDN, so keep successful cross-origin assets too.
-      // That lets the already-opened app shell continue to work offline.
+      // Keep app assets and the Leaflet CDN library before returning the response.
       if (response.ok || response.type === 'opaque') {
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        return caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy)).then(() => response).catch(() => response);
       }
       return response;
-    }).catch(() => caches.match('./index.html')))
+    }).catch(() => event.request.mode === 'navigate' ? caches.match('./index.html') : Response.error()))
   );
 });
