@@ -1,64 +1,13 @@
-# 釣魚紀錄 iPhone PWA
+# 釣魚紀錄 PWA
 
-版本：**v0.25.0（測試版）**  
-建置日期：**2026-09-03**
+這是純前端、可安裝到手機主畫面的單機版網頁。使用者的魚獲、魚種與釣點資料只儲存在該手機瀏覽器中，不需要資料庫或後端。
 
-這個資料夾已整理成可直接上傳 GitHub Pages 的 PWA 網頁。iPhone 建議使用 Safari 開啟後加入主畫面。
+## 上傳 GitHub Pages
 
-## GitHub 建議名稱
+1. 解壓縮 `fish-map-pwa-upload.zip`，把裡面的檔案上傳到 GitHub 儲存庫根目錄。
+2. 在儲存庫的 **Settings → Pages**，選擇 **Deploy from a branch**，分支選 `main`、資料夾選 `/(root)`，再儲存。
+3. 開啟 GitHub Pages 顯示的 HTTPS 網址。iPhone 使用 Safari 的「分享 → 加入主畫面」；Android 可在 Chrome 選「安裝應用程式」。
 
-**Repository：`fishing-log-pwa`**
+## 離線與定位
 
-不要把 V25、日期或中文放進 Repository 名稱；版本改用 Git Tag / Release 管理。完整規則請看 `NAMING.md`。
-
-## 上傳 GitHub
-
-1. GitHub 新增 Repository：`fishing-log-pwa`
-2. 解壓本 ZIP。
-3. 把 **解壓後 `fishing-log-pwa` 資料夾裡的全部檔案** 上傳到 Repository 根目錄。
-4. Commit 到 `main`。
-5. GitHub：**Settings → Pages → Build and deployment → Deploy from a branch**。
-6. Branch 選 **`main`**，Folder 選 **`/ (root)`**，儲存。
-7. 等 GitHub Pages 發布完成。
-
-網址通常會是：
-
-`https://你的GitHub帳號.github.io/fishing-log-pwa/`
-
-## iPhone 使用
-
-1. 用 **Safari** 開啟 GitHub Pages 網址。
-2. 第一次使用定位時選擇允許位置權限。
-3. Safari 下方「分享」→ **加入主畫面**。
-4. 主畫面會顯示「釣魚紀錄」圖示，之後可像 App 一樣開啟。
-
-## iOS / GPS 注意事項
-
-- GPS 定位請使用 **HTTPS** 網址；GitHub Pages 本身是 HTTPS。
-- 直接從 iPhone「檔案」App 開 `index.html` 時，Service Worker 與定位可能無法正常使用，正式測試請用 GitHub Pages 網址。
-- 網頁資料目前存於瀏覽器 `localStorage`。同一個 GitHub Pages 網址更新版本，原本紀錄可繼續保留；清除 Safari 網站資料會清掉本機紀錄。
-- 地圖使用 OpenStreetMap 圖磚，地圖內容仍需網路。PWA 會快取網頁本身與必要介面資產。
-
-## 專案檔案
-
-```text
-fishing-log-pwa/
-├─ index.html
-├─ manifest.webmanifest
-├─ sw.js
-├─ VERSION
-├─ NAMING.md
-├─ README.md
-├─ .nojekyll
-├─ .gitignore
-└─ assets/
-   └─ icons/
-      ├─ apple-touch-icon.png
-      ├─ icon-192.png
-      ├─ icon-512.png
-      └─ icon-maskable-512.png
-```
-
-## 更新版本
-
-後續不要把 `index.html` 改成 `index_V26.html`。維持 `index.html`，只更新內容與 `VERSION` / Git Tag。這樣 iPhone 主畫面網址不會改。
+第一次開啟時需連網，讓程式、圖示與地圖元件下載並建立離線快取；之後記錄功能可離線使用。地圖圖磚由 OpenStreetMap 提供，離線時不保證能顯示尚未看過的地圖區域。GPS 定位必須從 HTTPS 網址（例如 GitHub Pages）開啟並允許定位權限。

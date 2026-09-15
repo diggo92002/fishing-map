@@ -11,10 +11,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="釣魚紀錄" />
 <meta name="format-detection" content="telephone=no" />
-<meta name="app-version" content="0.26.0" />
-<link rel="manifest" href="./manifest.real-location.webmanifest" />
-<link rel="apple-touch-icon" href="./assets/icons/icon.svg" />
-<link rel="icon" type="image/svg+xml" href="./assets/icons/icon.svg" />
+<meta name="app-version" content="1.0.0" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
 
 <title>釣魚紀錄｜真實定位</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
@@ -777,6 +777,11 @@ const locationMapDetails=document.getElementById('locationMapDetails');
 locationMapDetails.parentNode.insertBefore(document.getElementById('quickCatchCard'),locationMapDetails);
 locationMapDetails.open=localStorage.getItem('sunnyfish_location_map_open_v1')==='1';
 locationMapDetails.addEventListener('toggle',e=>{localStorage.setItem('sunnyfish_location_map_open_v1',e.target.open?'1':'0');if(e.target.open)setTimeout(()=>map?.invalidateSize(),50);});
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(error => {
+    console.warn('離線功能啟動失敗：', error);
+  }));
+}
 </script>
 
 </body>
