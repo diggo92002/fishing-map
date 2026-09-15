@@ -136,9 +136,16 @@
       </div>
       <div id="spotShareStatus" class="share-status">有座標的釣獲會自動列入可分享釣點。</div>
 
-      <div class="share-divider"></div>
-      <div class="share-subtitle" style="margin-top:0">💾 完整資料備份</div>
-      <div class="hint">備份包含魚種、釣獲紀錄與我的釣點。換手機、清除瀏覽資料前請先下載備份。</div>
+    </div>
+  </details>
+
+  <details id="fullBackupDetails" class="card share-collapse">
+    <summary class="share-summary">
+      <span>💾 完整資料備份</span>
+      <span class="share-summary-hint">點此展開／收合</span>
+    </summary>
+    <div class="share-collapse-body">
+      <div class="hint" style="margin-top:0">備份包含魚種、釣獲紀錄與我的釣點。換手機、清除瀏覽資料前請先下載備份。</div>
       <div class="spot-share-actions">
         <button class="btn btn-primary" onclick="downloadFullBackup()">⬇️ 下載完整備份</button>
         <button class="btn btn-dark" onclick="copyFullBackup()">📋 複製備份文字</button>
@@ -151,6 +158,7 @@
         <button class="btn btn-danger" onclick="restoreFullBackup()">↩️ 還原完整備份</button>
         <button class="btn btn-dark" onclick="document.getElementById('backupImportText').value=''">清除</button>
       </div>
+      <div id="backupStatus" class="share-status"></div>
     </div>
   </details>
 
@@ -536,12 +544,12 @@ function makeSpotShareText(spots){
   lines.push('=== END ===');
   return lines.join('\n');
 }
-async function copyTextDirect(text,successText){
+async function copyTextDirect(text,successText,statusElementId='spotShareStatus'){
   if(!text){alert('目前沒有可複製的釣點。');return false;}
   try{
     if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(text);
     else{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
-    const st=document.getElementById('spotShareStatus');if(st)st.textContent=successText||'已複製，可直接貼到 LINE。';
+    const st=document.getElementById(statusElementId);if(st)st.textContent=successText||'已複製，可直接貼到 LINE。';
     return true;
   }catch(err){
     window.prompt('自動複製失敗，請長按／Ctrl+C 複製以下文字：',text);return false;
@@ -612,9 +620,10 @@ function downloadFullBackup(){
   const blob=new Blob([fullBackupText()],{type:'application/json;charset=utf-8'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`釣魚紀錄備份_${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  document.getElementById('backupStatus').textContent='完整備份已開始下載。';
 }
 async function copyFullBackup(){
-  await copyTextDirect(fullBackupText(),'完整備份已複製，可貼到安全的文字檔保存。');
+  await copyTextDirect(fullBackupText(),'完整備份已複製，可貼到安全的文字檔保存。','backupStatus');
 }
 function restoreFullBackup(){
   const raw=document.getElementById('backupImportText')?.value.trim();
@@ -634,7 +643,7 @@ function restoreFullBackup(){
     renderFishSpecies();renderRecords();renderMapFishFilters();renderSavedSpots();renderFishingSpotMarkers();
     if(catchRecords.some(hasPosition))syncPointToLatestCatch(false);
     document.getElementById('backupImportText').value='';
-    document.getElementById('spotShareStatus').textContent=`已還原完整備份：${catchRecords.length} 筆釣獲、${savedSpots.length} 個我的釣點。`;
+    document.getElementById('backupStatus').textContent=`已還原完整備份：${catchRecords.length} 筆釣獲、${savedSpots.length} 個我的釣點。`;
   }catch(err){alert('無法還原備份。請確認貼上的是本網頁下載的完整備份 JSON。');}
 }
 
