@@ -95,7 +95,8 @@
       <div id="mapFilterSummary" class="map-filter-summary">尚無可顯示的釣獲位置。</div>
     </div>
     <div id="distributionMap"></div>
-    <div class="hint">預設會顯示所有「有座標」的釣獲紀錄。勾選 1 種或多種魚後，分布地圖會立即更新並自動縮放到該魚種的釣獲位置。</div>
+    <div class="map-legend"><span><span class="legend-dot legend-spot"></span>本機釣獲魚種</span><span><span class="legend-dot legend-shared"></span>朋友分享的魚種</span></div>
+    <div class="hint">標記直接顯示魚種。預設會顯示本機釣獲與朋友分享、且有座標的魚種資料；勾選魚種後地圖會立即更新。</div>
     </div>
   </details>
 
@@ -219,13 +220,20 @@ function updateSavePointButton(){
   btn.disabled=!spotPositionDirty;
   btn.textContent=spotPositionDirty?'💾 儲存釣點位置（已移動）':'💾 儲存釣點位置';
 }
+function activeSpotSpecies(){
+  if(activeSpotContext?.kind==='catch')return String(catchRecords.find(r=>r.id===activeSpotContext.recordId)?.species||'');
+  if(activeSpotContext?.kind==='imported')return String(savedSpots.find(s=>s.id===activeSpotContext.savedSpotId)?.species||'');
+  return '';
+}
 function currentSpotPopupHtml(){
-  if(!currentPoint)return '<strong>釣獲位置</strong>';
-  return `<strong>釣獲位置</strong><br>${Number(currentPoint.lat).toFixed(6)}, ${Number(currentPoint.lon).toFixed(6)}`;
+  const species=activeSpotSpecies()||'未提供魚種';
+  if(!currentPoint)return `<strong>${esc(species)}</strong>`;
+  return `<strong>${esc(species)}</strong><br>${Number(currentPoint.lat).toFixed(6)}, ${Number(currentPoint.lon).toFixed(6)}`;
 }
 function setPoint(lat,lon,accuracy=null,source='定位',center=true){
   currentPoint={lat:Number(lat),lon:Number(lon),accuracy:accuracy==null?null:Number(accuracy),source};
-  const spotIcon=L.divIcon({className:'catch-map-icon',html:'<div class="catch-map-pin" style="border-color:#ef4444;color:#991b1b">釣點</div>',iconSize:[42,30],iconAnchor:[21,15],popupAnchor:[0,-15]});
+  const activeLabel=esc(activeSpotSpecies()||'魚種');
+  const spotIcon=L.divIcon({className:'catch-map-icon',html:`<div class="catch-map-pin" style="border-color:#ef4444;color:#991b1b">${activeLabel.slice(0,4)}</div>`,iconSize:[42,30],iconAnchor:[21,15],popupAnchor:[0,-15]});
   if(pointMarker){
     pointMarker.setLatLng([lat,lon]);
     pointMarker.setIcon(spotIcon);
@@ -286,7 +294,7 @@ function renderFishingSpotMarkers(){
   getImportedSpots().forEach(spot=>{
     if(activeSpotContext?.kind==='imported'&&activeSpotContext.savedSpotId===spot.id)return;
     const marker=L.circleMarker([spot.lat,spot.lon],{radius:7,weight:2,color:'#ffffff',fillColor:'#a855f7',fillOpacity:.95});
-    marker.bindPopup(`<strong>${esc(spot.name)}</strong><br><span style="font-size:11px;color:#64748b">朋友分享的釣點</span><br>${Number(spot.lat).toFixed(6)}, ${Number(spot.lon).toFixed(6)}`);
+    marker.bindPopup(`<strong>${esc(spot.species||'未提供魚種')}</strong><br>${esc(spot.name)}<br><span style="font-size:11px;color:#64748b">朋友分享的釣點</span><br>${Number(spot.lat).toFixed(6)}, ${Number(spot.lon).toFixed(6)}`);
     marker.on('click',()=>{
       if(spotPositionDirty&&!confirm('目前釣點已移動但尚未儲存。要放棄這次移動並切換到其他釣點嗎？'))return;
       activateImportedSpot(spot,true);
@@ -425,7 +433,7 @@ function isValidSpotObject(s){
   return Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180;
 }
 function normalizeSpot(s){
-  return {id:String(s.id||`spot_${Date.now()}_${Math.random().toString(36).slice(2,8)}`),name:String(s.name||'未命名釣點').trim()||'未命名釣點',lat:Number(s.lat),lon:Number(s.lon),createdAt:s.createdAt||new Date().toISOString(),source:String(s.source||'手動')};
+  return {id:String(s.id||`spot_${Date.now()}_${Math.random().toString(36).slice(2,8)}`),name:String(s.name||'未命名釣點').trim()||'未命名釣點',species:String(s.species||'未提供魚種').trim()||'未提供魚種',lat:Number(s.lat),lon:Number(s.lon),createdAt:s.createdAt||new Date().toISOString(),source:String(s.source||'手動')};
 }
 function spotCoordKey(s){return `${Number(s.lat).toFixed(6)},${Number(s.lon).toFixed(6)}`;}
 function loadSavedSpots(){
@@ -439,6 +447,7 @@ function saveSavedSpots(){
   localStorage.setItem('sunnyfish_saved_spots_v1',JSON.stringify(savedSpots));
   renderSavedSpots();
   renderFishingSpotMarkers();
+  renderMapFishFilters();
 }
 function uniqueSpotName(base,spots=savedSpots){
   const clean=(String(base||'未命名釣點').trim()||'未命名釣點');
@@ -449,7 +458,7 @@ function uniqueSpotName(base,spots=savedSpots){
 }
 function getCatchSpots(){
   // 分享清單與匯出文字的第一行以最新一筆釣獲的魚種為主，避免顯示預設的未命名釣點。
-  return getCyclableFishingSpots().map(s=>({name:s.latestSpecies||s.name,lat:s.lat,lon:s.lon,catchCount:s.catchCount,totalQty:s.totalQty,source:'本機釣獲',latestSavedAt:s.latestSavedAt,recordIds:[...s.recordIds]}));
+  return getCyclableFishingSpots().map(s=>({name:s.latestSpecies||s.name,species:s.latestSpecies||'未提供魚種',lat:s.lat,lon:s.lon,catchCount:s.catchCount,totalQty:s.totalQty,source:'本機釣獲',latestSavedAt:s.latestSavedAt,recordIds:[...s.recordIds]}));
 }
 function isSharedSpot(s){
   return ['匯入','別人分享'].includes(String(s?.source||''));
@@ -480,7 +489,7 @@ function renderSavedSpots(){
     <div class="saved-spot-main">
       <div class="saved-spot-name">${esc(s.name)}</div>
       <div class="saved-spot-coords">${Number(s.lat).toFixed(6)}, ${Number(s.lon).toFixed(6)}</div>
-      <div class="saved-spot-coords">${s.kind==='local'?`本機 ${esc(s.catchCount)} 筆釣獲・共 ${esc(s.totalQty)} 尾`:'備註：別人分享的釣點'}</div>
+      <div class="saved-spot-coords">魚種：${esc(s.species||'未提供魚種')}｜${s.kind==='local'?`本機 ${esc(s.catchCount)} 筆釣獲・共 ${esc(s.totalQty)} 尾`:'備註：別人分享的釣點'}</div>
     </div>
     <div class="saved-spot-actions">
       <button class="btn btn-dark btn-small" onclick="useShareableSpot(${i})">地圖</button>
@@ -511,15 +520,16 @@ function deleteImportedShareableSpot(index){
   renderFishingSpotMarkers();
 }
 function makeSpotSharePayload(spots){
-  return {format:'sunnyfish-spots',version:3,exportedAt:new Date().toISOString(),spots:spots.filter(isValidSpotObject).map(s=>({name:String(s.name||'未命名釣點'),lat:Number(s.lat),lon:Number(s.lon)}))};
+  return {format:'sunnyfish-spots',version:4,exportedAt:new Date().toISOString(),spots:spots.filter(isValidSpotObject).map(s=>({name:String(s.name||'未命名釣點'),species:String(s.species||'未提供魚種'),lat:Number(s.lat),lon:Number(s.lon)}))};
 }
 function makeSpotShareText(spots){
   const clean=spots.filter(isValidSpotObject);
   if(!clean.length)return '';
-  const lines=['=== SUNNYFISH-SPOTS-V3 ===','【有漁獲釣點分享】'];
+  const lines=['=== SUNNYFISH-SPOTS-V4 ===','【魚種釣點分享】'];
   clean.forEach((s,i)=>{
     if(i)lines.push('---');
     lines.push(`名稱: ${String(s.name||'未命名釣點').replace(/[\r\n]+/g,' ')}`);
+    lines.push(`魚種: ${String(s.species||'未提供魚種').replace(/[\r\n]+/g,' ')}`);
     lines.push(`緯度: ${Number(s.lat).toFixed(6)}`);
     lines.push(`經度: ${Number(s.lon).toFixed(6)}`);
   });
@@ -557,15 +567,16 @@ function parseSpotShareText(raw){
     if(incoming.length)return incoming.filter(isValidSpotObject).map(normalizeSpot);
   }catch(e){}
 
-  const body=text.replace(/^.*?SUNNYFISH-SPOTS-V3.*?\n/s,'').replace(/===\s*END\s*===.*$/s,'').replace(/【有漁獲釣點分享】/g,'').trim();
+  const body=text.replace(/^.*?SUNNYFISH-SPOTS-V[34].*?\n/s,'').replace(/===\s*END\s*===.*$/s,'').replace(/【(?:有漁獲釣點|魚種釣點)分享】/g,'').trim();
   const blocks=body.split(/\n\s*---\s*\n/);
   const incoming=[];
   blocks.forEach(block=>{
     const name=(block.match(/(?:^|\n)\s*名稱\s*[:：]\s*(.+)/)?.[1]||'未命名釣點').trim();
+    const species=(block.match(/(?:^|\n)\s*魚種\s*[:：]\s*(.+)/)?.[1]||'未提供魚種').trim();
     const latRaw=block.match(/(?:^|\n)\s*緯度\s*[:：]\s*(-?\d+(?:\.\d+)?)/)?.[1];
     const lonRaw=block.match(/(?:^|\n)\s*經度\s*[:：]\s*(-?\d+(?:\.\d+)?)/)?.[1];
     const lat=Number(latRaw),lon=Number(lonRaw);
-    if(Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180)incoming.push(normalizeSpot({name,lat,lon}));
+    if(Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180)incoming.push(normalizeSpot({name,species,lat,lon}));
   });
   return incoming;
 }
@@ -627,12 +638,15 @@ function restoreFullBackup(){
   }catch(err){alert('無法還原備份。請確認貼上的是本網頁下載的完整備份 JSON。');}
 }
 
+function getDistributionEntries(){
+  const local=catchRecords.filter(hasPosition).map(r=>({kind:'local',species:String(r.species||'未提供魚種'),lat:Number(r.lat),lon:Number(r.lon),quantity:r.quantity||1,note:r.note||'',savedAt:r.savedAt||''}));
+  const shared=getImportedSpots().map(s=>({kind:'shared',species:String(s.species||'未提供魚種'),name:s.name||'未命名釣點',lat:Number(s.lat),lon:Number(s.lon)}));
+  return [...local,...shared];
+}
 function getRecordSpeciesStats(){
   const counts=new Map();
-  catchRecords.forEach(r=>{
-    if(!r?.species)return;
-    if(!hasPosition(r))return;
-    counts.set(r.species,(counts.get(r.species)||0)+1);
+  getDistributionEntries().forEach(entry=>{
+    counts.set(entry.species,(counts.get(entry.species)||0)+1);
   });
   return [...counts.entries()].sort((a,b)=>a[0].localeCompare(b[0],'zh-TW'));
 }
@@ -643,8 +657,8 @@ function renderMapFishFilters(){
   [...selectedMapFish].forEach(name=>{if(!available.has(name))selectedMapFish.delete(name);});
   if(stats.length && selectedMapFish.size===0 && !box.dataset.userCleared){stats.forEach(([name])=>selectedMapFish.add(name));}
   if(!stats.length){
-    box.innerHTML='<div class="empty" style="padding:0">目前沒有含位置的釣獲紀錄。</div>';
-    document.getElementById('mapFilterSummary').textContent='尚無可顯示的釣獲位置。';
+    box.innerHTML='<div class="empty" style="padding:0">目前沒有含位置的魚種資料。</div>';
+    document.getElementById('mapFilterSummary').textContent='尚無可顯示的魚種資料。';
     updateCatchMarkers();
     return;
   }
@@ -673,28 +687,32 @@ function clearAllMapFish(){
   const box=document.getElementById('mapFishFilters');box.dataset.userCleared='1';
   renderMapFishFilters();
 }
-function makeCatchIcon(species){
+function makeCatchIcon(species,kind='local'){
   const label=String(species||'魚').slice(0,4);
-  return L.divIcon({className:'catch-map-icon',html:`<div class="catch-map-pin">${esc(label)}</div>`,iconSize:[36,30],iconAnchor:[18,15],popupAnchor:[0,-15]});
+  const style=kind==='shared'?'border-color:#a855f7;color:#581c87':'';
+  return L.divIcon({className:'catch-map-icon',html:`<div class="catch-map-pin" style="${style}">${esc(label)}</div>`,iconSize:[36,30],iconAnchor:[18,15],popupAnchor:[0,-15]});
 }
 function updateCatchMarkers(autoFit=false){
   if(!distributionMap||!catchMarkerLayer)return;
   catchMarkerLayer.clearLayers();
-  const positioned=catchRecords.filter(hasPosition);
-  const missingCount=catchRecords.length-positioned.length;
-  const visible=positioned.filter(r=>selectedMapFish.has(r.species));
-  visible.forEach(r=>{
-    const marker=L.marker([+r.lat,+r.lon],{icon:makeCatchIcon(r.species)}).addTo(catchMarkerLayer);
-    const note=r.note?`<br>備註：${esc(r.note)}`:'';
-    marker.bindPopup(`<strong>${esc(r.species)} × ${esc(r.quantity)}</strong><br>${Number(r.lat).toFixed(6)}, ${Number(r.lon).toFixed(6)}<br>${esc(formatTime(r.savedAt))}${note}`);
+  const entries=getDistributionEntries();
+  const missingCount=catchRecords.length-catchRecords.filter(hasPosition).length;
+  const visible=entries.filter(entry=>selectedMapFish.has(entry.species));
+  visible.forEach(entry=>{
+    const marker=L.marker([entry.lat,entry.lon],{icon:makeCatchIcon(entry.species,entry.kind)}).addTo(catchMarkerLayer);
+    const popup=entry.kind==='shared'
+      ?`<strong>${esc(entry.species)}</strong><br>${esc(entry.name)}<br><span style="font-size:11px;color:#7e22ce">朋友分享的魚種釣點</span><br>${entry.lat.toFixed(6)}, ${entry.lon.toFixed(6)}`
+      :`<strong>${esc(entry.species)} × ${esc(entry.quantity)}</strong><br>${entry.lat.toFixed(6)}, ${entry.lon.toFixed(6)}<br>${esc(formatTime(entry.savedAt))}${entry.note?`<br>備註：${esc(entry.note)}`:''}`;
+    marker.bindPopup(popup);
   });
   const summary=document.getElementById('mapFilterSummary');
-  if(!positioned.length){
-    summary.textContent=catchRecords.length?`目前有 ${catchRecords.length} 筆釣獲紀錄，但都沒有位置座標，因此無法畫在分布地圖上。`:'尚無可顯示的釣獲位置。';
+  const sharedCount=entries.filter(entry=>entry.kind==='shared').length;
+  if(!entries.length){
+    summary.textContent=catchRecords.length?`目前有 ${catchRecords.length} 筆釣獲紀錄，但都沒有位置座標，因此無法畫在分布地圖上。`:'尚無可顯示的魚種資料。';
   }else if(!selectedMapFish.size){
-    summary.textContent=`目前未勾選魚種。共有 ${positioned.length} 筆有位置紀錄${missingCount?`，另 ${missingCount} 筆沒有座標`:''}。`;
+    summary.textContent=`目前未勾選魚種。共有 ${entries.length} 筆有位置的魚種資料（朋友分享 ${sharedCount} 筆）${missingCount?`，另 ${missingCount} 筆釣獲沒有座標`:''}。`;
   }else{
-    summary.textContent=`目前顯示 ${selectedMapFish.size} 種魚，共 ${visible.length} 筆有位置的釣獲${missingCount?`；另 ${missingCount} 筆沒有座標`:''}。`;
+    summary.textContent=`目前顯示 ${selectedMapFish.size} 種魚，共 ${visible.length} 筆位置資料（朋友分享 ${visible.filter(entry=>entry.kind==='shared').length} 筆）${missingCount?`；另 ${missingCount} 筆釣獲沒有座標`:''}。`;
   }
   if(autoFit&&visible.length)fitCatchDistribution(false);
 }
