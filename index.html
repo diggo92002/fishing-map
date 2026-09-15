@@ -111,13 +111,13 @@
 
   <details class="card share-collapse">
     <summary class="share-summary">
-      <span>📤 分享／接收釣點</span>
+      <span>📍 我的釣點／分享</span>
       <span class="share-summary-hint">點此展開／收合</span>
     </summary>
     <div class="share-collapse-body">
-      <div class="hint" style="margin-top:0">只分享釣點名稱與座標，不含魚種、數量或備註。按「複製」後可直接貼到 LINE；收到朋友的文字後貼到下方即可加入。</div>
+      <div class="hint" style="margin-top:0">這裡是你的釣點清單。只分享釣點名稱與座標，不含魚種、數量或備註；收到朋友的文字後貼到下方，會新增到「我的釣點」並標註為別人分享。</div>
 
-      <div class="share-subtitle" style="margin-top:10px">📤 分享給朋友</div>
+      <div class="share-subtitle" style="margin-top:10px">📍 我的釣點</div>
       <div class="spot-share-actions">
         <button class="btn btn-primary" onclick="copyAllShareableSpots()">📋 複製全部釣點</button>
       </div>
@@ -435,8 +435,11 @@ function getCatchSpots(){
   // 分享清單與匯出文字的第一行以最新一筆釣獲的魚種為主，避免顯示預設的未命名釣點。
   return getCyclableFishingSpots().map(s=>({name:s.latestSpecies||s.name,lat:s.lat,lon:s.lon,catchCount:s.catchCount,totalQty:s.totalQty,source:'本機釣獲',latestSavedAt:s.latestSavedAt,recordIds:[...s.recordIds]}));
 }
+function isSharedSpot(s){
+  return ['匯入','別人分享'].includes(String(s?.source||''));
+}
 function getImportedSpots(){
-  return savedSpots.filter(s=>isValidSpotObject(s)&&String(s.source||'')==='匯入');
+  return savedSpots.filter(s=>isValidSpotObject(s)&&isSharedSpot(s));
 }
 function getShareableSpots(){
   const local=getCatchSpots().map(s=>({...s,kind:'local'}));
@@ -453,14 +456,14 @@ function renderSavedSpots(){
   if(!el)return;
   const spots=getShareableSpots();
   if(!spots.length){
-    el.innerHTML='<div class="empty">目前還沒有可分享的釣點。先在有定位的狀態下記錄一筆釣獲。</div>';
+    el.innerHTML='<div class="empty">目前還沒有我的釣點。先記錄一筆有定位的釣獲，或匯入朋友分享的釣點。</div>';
     return;
   }
   el.innerHTML=spots.map((s,i)=>`<div class="saved-spot-item">
     <div class="saved-spot-main">
       <div class="saved-spot-name">${esc(s.name)}</div>
       <div class="saved-spot-coords">${Number(s.lat).toFixed(6)}, ${Number(s.lon).toFixed(6)}</div>
-      <div class="saved-spot-coords">${s.kind==='local'?`本機 ${esc(s.catchCount)} 筆釣獲・共 ${esc(s.totalQty)} 尾`:'朋友分享的釣點'}</div>
+      <div class="saved-spot-coords">${s.kind==='local'?`本機 ${esc(s.catchCount)} 筆釣獲・共 ${esc(s.totalQty)} 尾`:'備註：別人分享的釣點'}</div>
     </div>
     <div class="saved-spot-actions">
       <button class="btn btn-dark btn-small" onclick="useShareableSpot(${i})">地圖</button>
@@ -482,7 +485,7 @@ function useShareableSpot(index){
 }
 function deleteImportedShareableSpot(index){
   const s=getShareableSpots()[index];if(!s||s.kind!=='imported')return;
-  const realIndex=savedSpots.findIndex(x=>String(x.source||'')==='匯入'&&Number(x.lat)===Number(s.lat)&&Number(x.lon)===Number(s.lon)&&String(x.name)===String(s.name));
+  const realIndex=savedSpots.findIndex(x=>isSharedSpot(x)&&Number(x.lat)===Number(s.lat)&&Number(x.lon)===Number(s.lon)&&String(x.name)===String(s.name));
   if(realIndex<0)return;
   if(!confirm(`要刪除匯入釣點「${s.name}」嗎？`))return;
   const deletedId=savedSpots[realIndex]?.id;
@@ -560,10 +563,10 @@ function importSpotsFromText(){
     incoming.forEach(s=>{
       const duplicate=getShareableSpots().some(x=>Number(x.lat).toFixed(5)===Number(s.lat).toFixed(5)&&Number(x.lon).toFixed(5)===Number(s.lon).toFixed(5));
       if(duplicate){skipped++;return;}
-      s.name=uniqueSpotName(s.name,getShareableSpots());s.source='匯入';savedSpots.push(s);added++;
+      s.name=uniqueSpotName(s.name,getShareableSpots());s.source='別人分享';savedSpots.push(s);added++;
     });
     saveSavedSpots();
-    document.getElementById('spotShareStatus').textContent=`匯入完成：新增 ${added} 個有漁獲釣點${skipped?`，略過 ${skipped} 個重複位置`:''}。`;
+    document.getElementById('spotShareStatus').textContent=`匯入完成：已新增 ${added} 個釣點到「我的釣點」，並備註為「別人分享」${skipped?`；略過 ${skipped} 個重複位置`:''}。`;
     if(added)input.value='';
   }catch(err){
     alert('無法辨識這段文字。請完整貼上由本釣魚紀錄網頁產生的釣點分享文字。');
